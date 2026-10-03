@@ -1,0 +1,111 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 500" font-family="ui-sans-serif, system-ui, sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#9C9CA6"/>
+    </marker>
+    <marker id="arrow-hot" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#FF6B35"/>
+    </marker>
+  </defs>
+
+  <rect width="920" height="500" fill="#0E0E11"/>
+
+  <!-- ============ UI LAYER ============ -->
+  <rect x="20" y="24" width="880" height="104" rx="12" fill="#17171C" stroke="#2A2A33"/>
+  <text x="36" y="48" fill="#9C9CA6" font-size="11" letter-spacing="1.4">UI LAYER · React · may import the engine, never the reverse</text>
+
+  <g font-size="12.5" fill="#F7F6F4">
+    <rect x="36" y="60" width="196" height="52" rx="8" fill="#1E1E25" stroke="#2A2A33"/>
+    <text x="52" y="82">components/canvas</text>
+    <text x="52" y="99" fill="#9C9CA6" font-size="10.5">React Flow host, dnd bridge</text>
+
+    <rect x="244" y="60" width="196" height="52" rx="8" fill="#1E1E25" stroke="#2A2A33"/>
+    <text x="260" y="82">components/nodes</text>
+    <text x="260" y="99" fill="#9C9CA6" font-size="10.5">1 form per node type</text>
+
+    <rect x="452" y="60" width="196" height="52" rx="8" fill="#1E1E25" stroke="#2A2A33"/>
+    <text x="468" y="82">components/panels</text>
+    <text x="468" y="99" fill="#9C9CA6" font-size="10.5">inspector, console, menu</text>
+
+    <rect x="660" y="60" width="224" height="52" rx="8" fill="#1E1E25" stroke="#2A2A33"/>
+    <text x="676" y="82">components/edges</text>
+    <text x="676" y="99" fill="#9C9CA6" font-size="10.5">animateMotion particles</text>
+  </g>
+
+  <!-- ============ STATE LAYER ============ -->
+  <rect x="20" y="176" width="880" height="104" rx="12" fill="#17171C" stroke="#2A2A33"/>
+  <text x="36" y="200" fill="#9C9CA6" font-size="11" letter-spacing="1.4">STATE · Zustand · three stores so panel toggles never re-render the graph</text>
+
+  <g font-size="12.5" fill="#F7F6F4">
+    <rect x="36" y="212" width="276" height="52" rx="8" fill="#1E1E25" stroke="#FF6B35" stroke-opacity="0.45"/>
+    <text x="52" y="234">workflowStore</text>
+    <text x="52" y="251" fill="#9C9CA6" font-size="10.5">nodes, edges, undo/redo, workflows</text>
+
+    <rect x="324" y="212" width="276" height="52" rx="8" fill="#1E1E25" stroke="#FF6B35" stroke-opacity="0.45"/>
+    <text x="340" y="234">runStore</text>
+    <text x="340" y="251" fill="#9C9CA6" font-size="10.5">statuses, step logs, history</text>
+
+    <rect x="612" y="212" width="272" height="52" rx="8" fill="#1E1E25" stroke="#2A2A33"/>
+    <text x="628" y="234">uiStore</text>
+    <text x="628" y="251" fill="#9C9CA6" font-size="10.5">panels, speed, hydration</text>
+  </g>
+
+  <!-- ============ PURE ENGINE ============ -->
+  <rect x="20" y="328" width="596" height="148" rx="12" fill="#14141A" stroke="#FF6B35" stroke-opacity="0.55"/>
+  <text x="36" y="352" fill="#FFA23A" font-size="11" letter-spacing="1.4">PURE ENGINE · lib/engine · no React, no DOM, no Zustand</text>
+
+  <g font-size="12" fill="#F7F6F4">
+    <rect x="36" y="364" width="176" height="44" rx="8" fill="#1E1E25" stroke="#2A2A33"/>
+    <text x="50" y="382">graph.ts</text>
+    <text x="50" y="398" fill="#9C9CA6" font-size="10">Kahn waves, cycles</text>
+
+    <rect x="224" y="364" width="176" height="44" rx="8" fill="#1E1E25" stroke="#2A2A33"/>
+    <text x="238" y="382">validator.ts</text>
+    <text x="238" y="398" fill="#9C9CA6" font-size="10">pre-run issue list</text>
+
+    <rect x="412" y="364" width="188" height="44" rx="8" fill="#1E1E25" stroke="#2A2A33"/>
+    <text x="426" y="382">executor.ts</text>
+    <text x="426" y="398" fill="#9C9CA6" font-size="10">wave scheduler, events</text>
+
+    <rect x="36" y="418" width="176" height="44" rx="8" fill="#1E1E25" stroke="#2A2A33"/>
+    <text x="50" y="436">variables.ts</text>
+    <text x="50" y="452" fill="#9C9CA6" font-size="10">{{dot.path}} resolution</text>
+
+    <rect x="224" y="418" width="176" height="44" rx="8" fill="#1E1E25" stroke="#2A2A33"/>
+    <text x="238" y="436">simulator.ts</text>
+    <text x="238" y="452" fill="#9C9CA6" font-size="10">canned integrations</text>
+
+    <rect x="412" y="418" width="188" height="44" rx="8" fill="#1E1E25" stroke="#2A2A33"/>
+    <text x="426" y="436">node-defs/ · registry.ts</text>
+    <text x="426" y="452" fill="#9C9CA6" font-size="10">13 defs, each with execute</text>
+  </g>
+
+  <!-- ============ PERSISTENCE ============ -->
+  <rect x="636" y="328" width="264" height="148" rx="12" fill="#17171C" stroke="#2A2A33"/>
+  <text x="652" y="352" fill="#9C9CA6" font-size="11" letter-spacing="1.4">PERSISTENCE</text>
+
+  <g font-size="12" fill="#F7F6F4">
+    <rect x="652" y="364" width="232" height="44" rx="8" fill="#1E1E25" stroke="#2A2A33"/>
+    <text x="666" y="382">lib/utils/storage.ts</text>
+    <text x="666" y="398" fill="#9C9CA6" font-size="10">localStorage, autosave, migrate</text>
+
+    <rect x="652" y="418" width="232" height="44" rx="8" fill="#1E1E25" stroke="#2A2A33"/>
+    <text x="666" y="436">lib/utils/share.ts</text>
+    <text x="666" y="452" fill="#9C9CA6" font-size="10">lz-string into the URL hash</text>
+  </g>
+
+  <!-- ============ ARROWS ============ -->
+  <g stroke="#9C9CA6" stroke-width="1.6" fill="none">
+    <path d="M300,128 L300,176" marker-end="url(#arrow)"/>
+    <path d="M560,176 L560,128" marker-end="url(#arrow)"/>
+    <path d="M174,264 L174,328" marker-end="url(#arrow)"/>
+    <path d="M768,328 L768,264" marker-end="url(#arrow)"/>
+    <path d="M616,402 L636,402" marker-end="url(#arrow)"/>
+  </g>
+
+  <!-- the hot path: engine event stream back up to the UI -->
+  <g stroke="#FF6B35" stroke-width="2" fill="none">
+    <path d="M462,328 C462,300 462,296 462,264" marker-end="url(#arrow-hot)"/>
+  </g>
+  <text x="474" y="300" fill="#FFA23A" font-size="11">run events → statuses + particles</text>
+</svg>
