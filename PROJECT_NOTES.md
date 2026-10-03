@@ -509,7 +509,7 @@ export interface NodeUiDef {
       failure simulation.
 - [x] **Phase 5** — Templates (4 flows), save/load named workflows, import/export JSON, share link,
       undo/redo, auto-layout.
-- [ ] **Phase 6** — Landing page with looping animated demo, polish pass, accessibility pass,
+- [x] **Phase 6** — Landing page with looping animated demo, polish pass, accessibility pass,
       responsive fallback.
 - [ ] **Phase 7** — README (screenshots, architecture, "what I'd build next"), Vercel deploy prep.
 
@@ -839,3 +839,75 @@ modules), `components/nodes/base-node.tsx` (validation badges), `components/node
   showing a manual copy field.
 - Landing page is still Phase 1's hero-only page; the animated demo is Phase 6.
 - `npm audit`'s 5 high findings remain (dev-only `braces` chain — see Phase 1).
+
+### Phase 6 — Landing page, accessibility and responsive pass (COMPLETE)
+
+**Verification (all run, all green):**
+
+| Check | Command | Result |
+| --- | --- | --- |
+| Types | `npx tsc --noEmit` | exit 0 |
+| Lint | `npm run lint` | exit 0, 0 problems |
+| Unit tests | `npm test` | **184 passed** (10 files) |
+| Build | `npm run build` | ✓ Compiled successfully; `/`, `/_not-found`, `/builder` static |
+| Dead anchors | diffed rendered `href="#…"` against rendered `id="…"` | hrefs `['demo']`, ids include `demo` → **no dead anchors** |
+| Served CSS | fetched `/_next/static/chunks/_0zzy_4s._.css` | light `--accent: 17 88% 40%`, `--accent-hot: 26 90% 37%`; dark `16 100% 60%` / `32 100% 61%`; `:focus-visible` ring present |
+| Demo markup | grepped served `/` | 3 `<animateMotion>` + 3 `keyPoints`, 5 nodes, 3 particles, 1 spinner at SSR phase 0, console line `▸ trigger.webhook  running…` — matches the phase-0 state exactly |
+| Contrast | computed WCAG ratios from the tokens parsed back out of `globals.css` | **all 12 pairs ≥ 4.5:1 in both themes** (see below) |
+
+**Files created:** `components/landing/{demo-loop,feature-grid}.tsx`.
+
+**Files changed:** `app/page.tsx` (hero + demo + features, dropped the redundant
+three-step grid), `app/globals.css` (light-theme accent tokens),
+`components/nodes/registry.tsx` (`ACCENTS` now exported).
+
+**Decisions**
+
+1. **The landing demo is hand-built SVG, not a second React Flow instance.** A static SVG
+   plus one `setInterval` cannot fight the real canvas for focus or pointer events, and it
+   costs nothing to mount. It is `aria-hidden` with a `<figcaption>` text alternative.
+2. **Particle timing and node lighting share one 4200 ms clock.** Each `<animateMotion>`
+   carries `keyTimes`/`keyPoints` so its particle only travels inside its own slot of the
+   cycle and holds still otherwise — that is what makes the flow read as *sequential*
+   instead of as a conveyor belt. Verified: 3 animations, 3 keyPoints.
+3. **`ACCENTS` is now exported from the node registry** so the demo cannot drift from the
+   builder's palette. Hardcoding the hex values would have duplicated them.
+4. **The three-step "how it works" grid was removed.** The animated demo now shows the same
+   thing better, and the brief says keep the landing short. The secondary CTA moved to
+   `#demo`, and the anchor was re-verified rather than assumed (see the Phase 1 lesson).
+5. **Reduced motion freezes the demo on its finished frame** and starts no timer, derived
+   during render (`reducedMotion ? PHASES - 1 : phase`) rather than via `setState` in an
+   effect — the same `react-hooks/set-state-in-effect` rule that shaped `useMediaQuery` and
+   `usePersistence`.
+
+**Accessibility findings and fixes**
+
+1. **The light theme failed WCAG AA — fixed.** Measured with the real token values:
+   `--accent` #E2521B was **3.68:1** on the background, `--accent-hot` #E8820F was
+   **2.63:1**, and the button label #F7F6F4 sat at **3.56:1** on the accent. `.text-gradient-ember`
+   clips accent→accent-hot *as text*, so both gradient stops are text, not decoration — the
+   h1's ember phrase was the worst offender.
+   Replaced with `--accent: 17 88% 40%` (#C2410C) and `--accent-hot: 26 90% 37%` (#B45309).
+   Post-fix, all six light pairs and all six dark pairs clear 4.5:1. The dark theme (the
+   default) was already compliant and was left alone.
+   **Lesson recorded:** `--accent-hot` looks decorative because it mostly feeds gradients and
+   glows, but `.text-gradient-ember` and the button gradient make it load-bearing text and
+   label background. Audit gradient stops as text.
+2. **Keyboard navigation confirmed, not assumed.** Palette items are real `<button>`s with
+   `aria-label`, so Enter/Space activate `onClick` → add at viewport centre. Drag is an
+   enhancement on top, not the only path.
+3. **`:focus-visible` is a global rule** in `@layer base` (2px ring, 2px offset), not scoped
+   to a component, so every interactive element inherits it.
+4. **Responsive behaviour verified in code:** below `MOBILE_BREAKPOINT_PX` the palette,
+   inspector and console unmount, the minimap hides, `MobileNotice` shows, and
+   `<FlowCanvas readOnly>` sets `nodesConnectable`/`nodesDraggable`/`elementsSelectable` to
+   false and `deleteKeyCode` to null.
+
+**Known issues / deferred**
+
+- On a phone the Run button in the top bar still works and the canvas animates, but the run
+  console is unmounted, so there is nowhere to read the output. Within the "read-only view"
+  brief, but a mobile console sheet would be the obvious next step.
+- No headless-browser run in this sandbox, so console-error freedom and the SMIL animation
+  actually playing are asserted from the served markup, not observed in a browser.
+- Contrast was computed analytically from the token values; no screenshot diffing.

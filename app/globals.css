@@ -18,8 +18,14 @@
   --foreground: 255 8% 9%; /* #17161A */
   --muted-foreground: 248 4% 43%; /* #6B6A72 */
 
-  --accent: 17 79% 50%; /* #E2521B */
-  --accent-hot: 32 88% 48%; /* #E8820F */
+  /* Light-theme accents are darkened to clear WCAG AA. The ember gradient is
+     clipped as *text* (.text-gradient-ember), so BOTH stops must hit 4.5:1
+     against the background — and both must clear 4.5:1 against the near-white
+     --accent-contrast label that sits on .bg-gradient-ember buttons.
+     Measured: #C2410C 4.96:1 on bg / 4.79:1 with the label;
+               #B45309 4.81:1 on bg / 4.65:1 with the label. */
+  --accent: 17 88% 40%; /* #C2410C */
+  --accent-hot: 26 90% 37%; /* #B45309 */
   --accent-contrast: 40 16% 96%;
 
   --success: 148 68% 37%; /* #1E9E5A */

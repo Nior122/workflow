@@ -59,7 +59,8 @@ export type NodeUiDef = {
  * Deliberately no blue or purple, so nothing competes with the ember brand accent,
  * and no node sits close to the error red.
  */
-const ACCENTS = {
+/** Per-node accent colours. Exported so the landing demo cannot drift from the builder. */
+export const ACCENTS = {
   "trigger.manual": "#F5B301",
   "trigger.webhook": "#E0913D",
   "trigger.schedule": "#C9A227",

@@ -1,31 +1,19 @@
 import Link from "next/link";
-import { ArrowRight, Cable, Flame, MousePointerClick, Terminal } from "lucide-react";
+import { ArrowRight, Flame } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { APP_NAME } from "@/config/constants";
-
-const STEPS = [
-  {
-    icon: MousePointerClick,
-    title: "Drop your nodes",
-    body: "Drag triggers, actions and outputs from the palette onto an infinite canvas — or focus an item and press Enter.",
-  },
-  {
-    icon: Cable,
-    title: "Wire them together",
-    body: "Pull from a node's output handle to the next node's input. Filters branch into true and false paths that can merge again.",
-  },
-  {
-    icon: Terminal,
-    title: "Run and inspect",
-    body: "Press Run and watch data travel the edges. Every step logs its exact JSON input and output in the console below.",
-  },
-] as const;
+import { DemoLoop } from "@/components/landing/demo-loop";
+import { FeatureGrid } from "@/components/landing/feature-grid";
 
 /**
  * Landing page.
  *
- * Phase 1 ships the hero and the entry point; Phase 6 adds the looping animated
- * demo and the feature highlights. Kept short on purpose — the builder is the product.
+ * Kept deliberately short: hero, a looping demo of the real thing, three
+ * highlights, and the way in. The builder is the product — this page exists to
+ * earn one click.
+ *
+ * Every in-page anchor below must have a matching `id` in this file. See the
+ * Phase 1 note in PROJECT_NOTES.md about the dead `#how-it-works` anchor.
  */
 export default function LandingPage() {
   return (
@@ -53,7 +41,7 @@ export default function LandingPage() {
         </Button>
       </header>
 
-      <section className="relative z-10 flex flex-1 flex-col items-center justify-center px-6 py-16 text-center">
+      <section className="relative z-10 flex flex-col items-center px-6 pt-12 pb-4 text-center sm:pt-16">
         <span className="rounded-full border border-accent/30 bg-accent/10 px-3 py-1 font-mono text-[11px] tracking-wide text-accent uppercase">
           visual workflow builder
         </span>
@@ -78,63 +66,32 @@ export default function LandingPage() {
           </Button>
 
           <Button asChild variant="secondary" size="lg">
-            <a href="#how-it-works">How it works</a>
+            <a href="#demo">See it run</a>
           </Button>
         </div>
-
-        <p className="mt-6 font-mono text-[11px] text-muted-foreground">
-          runs entirely client-side · state saved to localStorage
-        </p>
       </section>
 
       <section
-        id="how-it-works"
-        aria-labelledby="how-it-works-heading"
-        className="relative z-10 scroll-mt-8 border-t border-border px-6 py-16"
+        id="demo"
+        aria-labelledby="demo-heading"
+        className="relative z-10 scroll-mt-8 px-6 py-10"
       >
-        <div className="mx-auto max-w-5xl">
-          <h2
-            id="how-it-works-heading"
-            className="text-center text-2xl font-semibold tracking-tight text-balance sm:text-3xl"
-          >
-            Three steps from blank canvas to running flow
+        <div className="mx-auto max-w-4xl">
+          <h2 id="demo-heading" className="sr-only">
+            A workflow running end to end
           </h2>
 
-          <ol className="mt-10 grid gap-4 sm:grid-cols-3">
-            {STEPS.map(({ icon: Icon, title, body }, index) => (
-              <li
-                key={title}
-                className="rounded-lg border border-border bg-surface-raised p-5 transition-colors hover:border-accent/40"
-              >
-                <span className="flex items-center gap-2.5">
-                  <span className="grid size-8 place-items-center rounded-md border border-accent/30 bg-accent/10 text-accent">
-                    <Icon className="size-4" aria-hidden strokeWidth={2.2} />
-                  </span>
-                  <span className="font-mono text-[11px] text-muted-foreground">
-                    {String(index + 1).padStart(2, "0")}
-                  </span>
-                </span>
+          <DemoLoop />
 
-                <h3 className="mt-3.5 text-sm font-semibold text-foreground">{title}</h3>
-                <p className="mt-1.5 text-sm leading-relaxed text-pretty text-muted-foreground">
-                  {body}
-                </p>
-              </li>
-            ))}
-          </ol>
-
-          <p className="mt-9 text-center">
-            <Button asChild>
-              <Link href="/builder">
-                Try it in the builder
-                <ArrowRight aria-hidden />
-              </Link>
-            </Button>
+          <p className="mt-4 text-center font-mono text-[11px] text-muted-foreground">
+            runs entirely client-side · state saved to localStorage
           </p>
         </div>
       </section>
 
-      <footer className="relative z-10 border-t border-border px-6 py-5 text-center text-xs text-muted-foreground">
+      <FeatureGrid />
+
+      <footer className="relative z-10 mt-auto border-t border-border px-6 py-5 text-center text-xs text-muted-foreground">
         Built with Next.js, React Flow and Zustand. All integrations simulated.
       </footer>
     </main>
