@@ -692,6 +692,30 @@ them in a portal only when open — I verified their wiring in source and that t
 render, but I have not seen them open. The 106 spacing changes are 2px-each and I cannot
 confirm they look better.
 
-## Phase 5 — Verify and show evidence
+## Phase 5 — Verify and show evidence — COMPLETE
 
-_Not started._
+The summary deliverable is **[`REPORT.md`](./REPORT.md)**: gate results, the broken→fixed
+table for all 18 findings, the two retractions, what is still imperfect, the substitute
+evidence, and manual test steps.
+
+**Gate, from a clean `.next`:** `tsc --noEmit` 0 · `eslint` 0/0 · **233 passed / 14 files** ·
+`npm run check:contrast` 26/26 (worst 4.64:1) · `next build` ✓ 3 static routes ·
+`GET /` 200 · `GET /builder` 200.
+
+**Screenshots: not produced.** Re-verified this session, not carried over from memory:
+no `chromium`/`google-chrome`/`firefox` on `PATH`, no `Xvfb`, `~/.cache/ms-playwright`
+contains only an empty `.links/`, and `npx playwright install chromium` fails with
+`Failed to download Chrome for Testing 153.0.8010.12 … Download failure, code=1`.
+
+**Substitute evidence:** `components/layout/__tests__/layout-contract.test.ts` — 8 tests
+that read the shipped source and assert the invariants overlap-freedom depends on (single
+z-scale with a strictly ordered set of steps, no raw numeric z-index in any component, the
+MiniMap not parked on the attribution's corner, the attribution still visible, the canvas
+track `minmax(0, 1fr)`, the canvas cell `min-w-0 overflow-hidden`).
+
+Negative control: re-introducing `z-50` in `empty-canvas.tsx` and moving the MiniMap back to
+`bottom-right` gives **2 failed | 6 passed**, naming both offenders; restored, **8 passed**.
+`git status` confirmed clean afterwards.
+
+**These are source checks, not rendered-layout checks.** That distinction is stated in
+`REPORT.md` §5 rather than left for the reader to discover.

@@ -3,12 +3,14 @@
 > **Living document.** Re-read this file at the start of every phase. Update it at the end of
 > every phase (tick the phase, list files, record decisions, list known issues).
 >
-> Status: **Build phases 1–8 complete. QA Phases 1–4 complete** (audit, P0/P1 fixes,
-> layout + z-index scale, UX polish). Awaiting "continue" to start QA Phase 5 (verify +
-> evidence) — note that screenshots are impossible here, see FIXES.md.
-> Branch `arena/01a102bb-workflow`. All gates green: `tsc --noEmit` 0, `eslint` 0/0,
-> **225 unit tests / 13 files**, `npm run check:contrast` 26/26, `next build`
-> (3 static routes), and a live `next dev` server returning 200 on `/` and `/builder`.
+> Status: **COMPLETE.** Build phases 1–8 and QA phases 1–5 are all done. The QA summary is
+> **`REPORT.md`**; the issue-by-issue audit log with root causes and evidence is
+> **`FIXES.md`**.
+> Branch `arena/01a102bb-workflow`. Final gate, from a clean `.next`: `tsc --noEmit` 0,
+> `eslint` 0/0, **233 unit tests / 14 files**, `npm run check:contrast` 26/26 (worst
+> 4.64:1), `next build` (3 static routes), `GET /` and `GET /builder` both 200.
+> **No browser exists in this sandbox**, so nothing has been visually verified and the
+> Phase 5 screenshots could not be taken — see `REPORT.md` §2.
 > The QA audit itself lives in **`FIXES.md`** — that is the current source of truth for
 > known issues. Sections 1–11 below describe the build; issue numbers there predate the
 > audit and do not correspond to `FIXES.md`.
@@ -1192,3 +1194,28 @@ toast is throttled to one per 15s rather than every time. Failed saves raise imm
 `components/ui/toast-viewport.tsx`, `components/ui/kbd.tsx`,
 `components/layout/__tests__/shell-tracks.test.ts` (Phase 3),
 `store/__tests__/run-state-isolation.test.ts`, `scripts/check-contrast.mjs`.
+
+
+### QA Phase 5 — Verify and show evidence (COMPLETE)
+
+Deliverable is **`REPORT.md`**: gate table, the broken→fixed table for all 18 findings
+(15 fixed, 2 retracted, 1 resolved by decision), the "still imperfect" list, the substitute
+evidence, and 14 manual test steps grouped by area.
+
+**Browser re-verified as unavailable this session** rather than repeated from memory: no
+browser binary on `PATH`, no `Xvfb`, `~/.cache/ms-playwright` holds only an empty `.links/`,
+and `npx playwright install chromium` fails at the download. Screenshots are impossible.
+
+**New: `components/layout/__tests__/layout-contract.test.ts`** (8 tests) — reads the shipped
+source and guards the structural invariants: the z-scale exists with strictly ordered steps,
+no raw numeric `z-\d+` remains in any component, the MiniMap is not in the attribution's
+corner, the attribution is still visible, the canvas track is `minmax(0, 1fr)`, and the
+canvas cell carries `min-w-0 overflow-hidden`. Negative-controlled: a raw `z-50` plus
+`position="bottom-right"` gives 2 named failures.
+
+**Test count 225 → 233** (14 files).
+
+**The honest bottom line:** every gate is green and every fix that could be unit-tested is
+tested and negative-controlled. Nothing has been looked at. The 106 spacing changes and the
+grid shell are the two things most worth a human eye, and `REPORT.md` §6 lists exactly what
+to check.

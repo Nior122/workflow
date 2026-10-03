@@ -1,5 +1,8 @@
 # FlowForge
 
+> **QA report:** [`REPORT.md`](./REPORT.md) — the audit-and-fix summary, what is still
+> imperfect, and manual test steps. Issue-by-issue detail in [`FIXES.md`](./FIXES.md).
+
 A visual workflow builder — a miniature Make.com / n8n that runs entirely in your browser.
 Drag nodes onto an infinite canvas, wire them together, press **Run**, and watch the data
 travel: edges light up with particles, nodes pulse while they execute, and every payload
@@ -155,21 +158,31 @@ configuration — see [`vercel.json`](vercel.json).
 
 ## Testing
 
-**184 tests across 10 files.** They cover logic, not pixels — which is exactly what the pure
+**233 tests across 14 files.** They cover logic, not pixels — which is exactly what the pure
 engine boundary buys you.
 
 | File | Tests | Covers |
 | --- | --- | --- |
-| `lib/engine/__tests__/executor.test.ts` | 31 | wave scheduling, branching, merge semantics, skip propagation, failure simulation |
+| `lib/engine/__tests__/executor.test.ts` | 35 | wave scheduling, branching, merge semantics, skip propagation, failure simulation, mid-run cancellation, partial branch failure |
 | `lib/engine/__tests__/registry.test.ts` | 33 | node construction, handle rules, config defaults |
+| `store/__tests__/workflow-store-history.test.ts` | 32 | undo/redo, edit coalescing, duplicate, multi-workflow, run history |
 | `lib/engine/__tests__/variables.test.ts` | 27 | `{{dot.path}}` resolution and precedence |
-| `store/__tests__/workflow-store-history.test.ts` | 25 | undo/redo, duplicate, multi-workflow, run history |
+| `lib/utils/__tests__/share.test.ts` | 15 | lz-string round-trip, corruption, schema rejection, hash stripping |
 | `lib/__tests__/templates.test.ts` | 15 | all 4 templates validate, are acyclic, and run to completion |
 | `store/__tests__/workflow-store.test.ts` | 14 | connection rules, delete, rename |
+| `components/layout/__tests__/shell-tracks.test.ts` | 13 | builder grid track widths and canvas space at 1024/1280/1440/1920 |
 | `lib/engine/__tests__/validator.test.ts` | 11 | cycles, missing triggers, unreachable nodes |
-| `lib/utils/__tests__/share.test.ts` | 10 | lz-string round-trip, corruption and schema rejection |
 | `lib/engine/__tests__/graph.test.ts` | 10 | topological waves, reachability |
+| `components/layout/__tests__/layout-contract.test.ts` | 8 | single z-index scale, canvas corner occupancy, grid child constraints |
 | `lib/__tests__/layout.test.ts` | 8 | column ordering, determinism, cyclic-graph safety |
+| `hooks/__tests__/validation-patch.test.ts` | 8 | the validation patch converges instead of looping |
+| `store/__tests__/run-state-isolation.test.ts` | 4 | run state does not leak between workflows |
+
+Three of these are **negative-controlled**: the fix was reverted and the tests confirmed to
+fail, then restored. A green suite proves nothing about a bug it cannot catch.
+
+There is also `npm run check:contrast`, which parses the HSL tokens out of `globals.css` and
+asserts 13 foreground/background pairs per theme clear WCAG AA.
 
 ---
 
@@ -250,6 +263,15 @@ primitives in `components/ui`.
   production; deliberately left.
 - Share links have a 2000-character soft limit, after which the UI warns that some apps may
   truncate the URL.
+- Autosave confirmation is throttled to one toast per 15s, because autosave fires ~600ms
+  after every edit pause. Failed saves raise immediately.
+- A disabled button shows no tooltip (Radix does not fire pointer events on disabled
+  triggers), so an empty canvas gives no explanation for a disabled Run.
+- Mobile sheets are a fixed `60dvh` with no drag-to-resize, and the compact tier has no
+  minimap.
+- No CI workflow; the gate is run by hand. Not deployed to Vercel.
+
+A fuller list, with what each one would take to close, is in [`REPORT.md`](./REPORT.md) §4.
 
 ## Licence
 
