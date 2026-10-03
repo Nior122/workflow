@@ -48,14 +48,7 @@ export function useLiveValidation(debounceMs = 220): void {
         nodes: state.nodes.map((node) => {
           const entry = changed.find((item) => item!.id === node.id);
           if (!entry) return node;
-          const issues = entry.issues;
-          return {
-            ...node,
-            data: {
-              ...node.data,
-              ...(issues.length > 0 ? { validation: issues } : {}),
-            },
-          } as typeof node;
+          return withValidation(node, entry.issues);
         }),
       }));
     }, debounceMs);
@@ -66,7 +59,30 @@ export function useLiveValidation(debounceMs = 220): void {
   }, [nodes, edges, isRunning, debounceMs]);
 }
 
-function sameIssues(a: readonly { code: string; message: string }[], b: readonly { code: string; message: string }[]): boolean {
+/**
+ * Attach graph-level issues to a node, or remove the key entirely when there are
+ * none.
+ *
+ * The removal matters. Spreading `...(issues.length ? { validation: issues } : {})`
+ * leaves the previous array in place, so the "did anything change" comparison above
+ * stays false forever: the badge never clears and the debounce re-fires on every
+ * tick, rebuilding the nodes array and re-rendering the whole canvas each time.
+ *
+ * Exported and pure so the convergence is unit-tested rather than eyeballed.
+ */
+export function withValidation<T extends { data: { validation?: unknown } }>(
+  node: T,
+  issues: readonly unknown[],
+): T {
+  if (issues.length > 0) {
+    return { ...node, data: { ...node.data, validation: issues } };
+  }
+  const data = { ...node.data };
+  delete data.validation;
+  return { ...node, data } as T;
+}
+
+export function sameIssues(a: readonly { code: string; message: string }[], b: readonly { code: string; message: string }[]): boolean {
   if (a.length !== b.length) return false;
   return a.every(
     (issue, index) => issue.code === b[index].code && issue.message === b[index].message,

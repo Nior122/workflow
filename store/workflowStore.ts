@@ -37,6 +37,22 @@ type Snapshot = {
 
 const HISTORY_LIMIT = 60;
 
+/**
+ * Consecutive edits to the SAME field of the SAME node inside this window collapse
+ * into one undo step.
+ *
+ * Without it, every keystroke in the inspector pushes a snapshot, so ⌘Z walks back
+ * one character at a time and the 60-step cap is consumed by a single sentence.
+ */
+const EDIT_COALESCE_MS = 700;
+
+let lastEdit: { nodeId: string; keys: string; at: number } | null = null;
+
+/** Test hook: clears the coalescing window so cases are order-independent. */
+export function resetEditCoalescing(): void {
+  lastEdit = null;
+}
+
 type WorkflowState = {
   /** Saved workflows, including the active one. */
   workflows: Workflow[];
@@ -226,13 +242,33 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   },
 
   updateNodeData: (nodeId, patch) =>
-    set((state) => ({
-      past: [...state.past, { nodes: state.nodes, edges: state.edges }].slice(-HISTORY_LIMIT),
-      future: [],
-      nodes: state.nodes.map((node) =>
-        node.id === nodeId ? ({ ...node, data: { ...node.data, ...patch } } as FlowNode) : node,
-      ),
-    })),
+    set((state) => {
+      // Same node + same data keys within the window = one logical edit.
+      const keys = Object.keys(patch).sort().join(",");
+      const now = Date.now();
+      const coalesce =
+        lastEdit !== null &&
+        lastEdit.nodeId === nodeId &&
+        lastEdit.keys === keys &&
+        now - lastEdit.at < EDIT_COALESCE_MS;
+      lastEdit = { nodeId, keys, at: now };
+
+      const history = coalesce
+        ? {}
+        : {
+            past: [...state.past, { nodes: state.nodes, edges: state.edges }].slice(
+              -HISTORY_LIMIT,
+            ),
+            future: [],
+          };
+
+      return {
+        ...history,
+        nodes: state.nodes.map((node) =>
+          node.id === nodeId ? ({ ...node, data: { ...node.data, ...patch } } as FlowNode) : node,
+        ),
+      };
+    }),
 
   renameNode: (nodeId, label) => {
     const trimmed = label.trim();
@@ -335,6 +371,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
 
   undo: () =>
     set((state) => {
+      lastEdit = null;
       const previous = state.past.at(-1);
       if (!previous) return {};
       return {
@@ -350,6 +387,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
 
   redo: () =>
     set((state) => {
+      lastEdit = null;
       const next = state.future[0];
       if (!next) return {};
       return {

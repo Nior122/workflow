@@ -3,9 +3,14 @@
 > **Living document.** Re-read this file at the start of every phase. Update it at the end of
 > every phase (tick the phase, list files, record decisions, list known issues).
 >
-> Status: **Phase 1 complete.** Awaiting "continue" to start Phase 2.
-> Branch `arena/01a102bb-workflow`. All gates green: `tsc --noEmit`, `eslint`, 32 unit tests,
-> `next build`, and a live `next dev` server returning 200 on `/` and `/builder`.
+> Status: **Build phases 1–8 complete. QA Phase 1 (audit) and QA Phase 2 (P0/P1 fixes)
+> complete.** Awaiting "continue" to start QA Phase 3 (builder shell layout).
+> Branch `arena/01a102bb-workflow`. All gates green: `tsc --noEmit` 0, `eslint` 0/0,
+> **208 unit tests / 11 files**, `next build` (3 static routes), and a live `next dev`
+> server returning 200 on `/` and `/builder`.
+> The QA audit itself lives in **`FIXES.md`** — that is the current source of truth for
+> known issues. Sections 1–11 below describe the build; issue numbers there predate the
+> audit and do not correspond to `FIXES.md`.
 
 ---
 

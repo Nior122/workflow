@@ -10,9 +10,9 @@ import { RunPanelContent } from "@/components/panels/bottom-panel";
 import { useAddNodeAtCenter } from "@/hooks/use-canvas-actions";
 import { useRunWorkflow } from "@/hooks/use-run-workflow";
 import { useSelectedNode, useWorkflowStore } from "@/store/workflowStore";
-import { useIsRunning } from "@/store/uiStore";
+import { useIsRunning, useUiStore } from "@/store/uiStore";
 
-type SheetId = "nodes" | "inspector" | "console" | null;
+type SheetId = "nodes" | "console" | null;
 
 /**
  * Bottom app bar for narrow viewports.
@@ -27,6 +27,8 @@ export function MobileDock() {
   const selectedNode = useSelectedNode();
   const nodeCount = useWorkflowStore((state) => state.nodes.length);
   const isRunning = useIsRunning();
+  const inspectorOpen = useUiStore((state) => state.inspectorOpen);
+  const setPanel = useUiStore((state) => state.setPanel);
   const { run, cancel } = useRunWorkflow();
   const addNodeAtCenter = useAddNodeAtCenter();
 
@@ -71,12 +73,18 @@ export function MobileDock() {
           <button
             key={id}
             type="button"
-            onClick={() => setOpen((current) => (current === id ? null : id))}
+            onClick={() =>
+              id === "inspector"
+                ? setPanel("inspector", !inspectorOpen)
+                : setOpen((current) => (current === id ? null : id))
+            }
             disabled={disabled}
-            aria-expanded={open === id}
+            aria-expanded={id === "inspector" ? inspectorOpen : open === id}
             className={cn(
               "relative flex flex-1 flex-col items-center gap-1 py-2.5 text-[10px] font-medium transition-colors",
-              open === id ? "text-accent" : "text-muted-foreground",
+              (id === "inspector" ? inspectorOpen : open === id)
+                ? "text-accent"
+                : "text-muted-foreground",
               "disabled:opacity-40",
             )}
           >
@@ -120,8 +128,8 @@ export function MobileDock() {
       </Sheet>
 
       <Sheet
-        open={open === "inspector"}
-        onOpenChange={(value) => setOpen(value ? "inspector" : null)}
+        open={inspectorOpen}
+        onOpenChange={(value) => setPanel("inspector", value)}
       >
         <SheetContent title="Inspector" subtitle="Rename, configure and test the selected node.">
           <div className="flex h-[60dvh] flex-col">

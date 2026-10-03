@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { initialState, loadState, saveState } from "@/lib/utils/storage";
-import { decodeShareHash } from "@/lib/utils/share";
+import { decodeShareHash, withoutShareHash } from "@/lib/utils/share";
 import { autoLayout } from "@/lib/layout";
 import { useWorkflowStore } from "@/store/workflowStore";
 import { useRunStore } from "@/store/runStore";
@@ -42,6 +42,10 @@ export function usePersistence(): void {
         activeWorkflowId: id,
         runHistory: [],
       });
+      // Consume the link. Leaving the hash in the URL would make every reload
+      // re-adopt it and shadow whatever this visitor has saved locally.
+      window.history.replaceState(null, "", withoutShareHash(window.location.href));
+
       useUiStore.setState({ hydration: "ready" });
       return;
     }

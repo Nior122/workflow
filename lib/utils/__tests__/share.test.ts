@@ -5,6 +5,7 @@ import {
   decodeShareHash,
   encodeWorkflow,
   shareUrlLength,
+  withoutShareHash,
 } from "../share";
 import { buildEdge, buildNode } from "@/lib/graph-builder";
 import { resetNodeIdCounter } from "@/lib/engine/registry";
@@ -146,5 +147,45 @@ describe("buildShareUrl", () => {
     expect(shareUrlLength({ name: "Demo", nodes, edges: [] }, "https://flowforge.app")).toBe(
       url.length,
     );
+  });
+});
+
+
+describe("withoutShareHash", () => {
+  it("strips the share fragment", () => {
+    expect(withoutShareHash("https://flowforge.app/builder#flow=abc123")).toBe(
+      "https://flowforge.app/builder",
+    );
+  });
+
+  it("keeps the path and query string", () => {
+    expect(withoutShareHash("https://flowforge.app/builder?demo=1#flow=abc")).toBe(
+      "https://flowforge.app/builder?demo=1",
+    );
+  });
+
+  it("leaves a URL with no fragment untouched", () => {
+    expect(withoutShareHash("https://flowforge.app/builder")).toBe(
+      "https://flowforge.app/builder",
+    );
+  });
+
+  it("only removes the first fragment, not a later '#' inside it", () => {
+    expect(withoutShareHash("https://a.test/x#flow=a#b")).toBe("https://a.test/x");
+  });
+
+  it("round-trips: a consumed link no longer decodes as a share link", () => {
+    const encoded = encodeWorkflow({
+      ...base,
+      nodes: [buildNode("t1", "trigger.manual")],
+      edges: [],
+    });
+    const withHash = `https://flowforge.app/builder${SHARE_HASH_PREFIX}${encoded}`;
+
+    const consumed = withoutShareHash(withHash);
+    const fragment = consumed.slice(consumed.indexOf("#"));
+
+    expect(consumed).not.toContain(SHARE_HASH_PREFIX);
+    expect(decodeShareHash(fragment).ok).toBe(false);
   });
 });

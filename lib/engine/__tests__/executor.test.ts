@@ -309,6 +309,46 @@ describe("execution speed", () => {
 });
 
 describe("cancellation", () => {
+  it("stops mid-run when the signal aborts partway through", async () => {
+    const controller = new AbortController();
+    const events: EngineEvent[] = [];
+    let sleeps = 0;
+
+    const nodes = [
+      node("t1", "trigger.manual", { payloadJson: TRIGGER_PAYLOAD }),
+      node("a1", "action.aiPrompt", { promptTemplate: "draft it" }),
+      node("a2", "action.textFormatter", { template: "{{body}}" }),
+      node("o1", "output.log"),
+    ];
+    const edges = [edge("t1", "a1"), edge("a1", "a2"), edge("a2", "o1")];
+
+    const result = await executeWorkflow({
+      runId: "run-1",
+      workflowId: "wf-1",
+      workflowName: "wf",
+      nodes,
+      edges,
+      speed: 1,
+      effects: {
+        // Abort once the run is genuinely underway, not before it starts.
+        sleep: async () => {
+          sleeps += 1;
+          if (sleeps >= 2) controller.abort();
+        },
+        now: () => sleeps * 100,
+        random: () => 0.5,
+      },
+      emit: (event) => events.push(event),
+      signal: controller.signal,
+    });
+
+    expect(sleeps).toBeGreaterThanOrEqual(2);
+    expect(result.status).toBe("cancelled");
+    // It did some work, then stopped before finishing the chain.
+    expect(result.steps.length).toBeGreaterThan(0);
+    expect(result.steps.length).toBeLessThan(nodes.length);
+  });
+
   it("stops and reports cancelled when the signal is already aborted", async () => {
     const controller = new AbortController();
     controller.abort();
@@ -427,5 +467,49 @@ describe("statusMapFromSteps", () => {
 
     expect(map.get("t1")).toBe("success");
     expect(map.get("a1")).toBe("error");
+  });
+});
+
+
+describe("partial failure across parallel branches", () => {
+  const build = () => ({
+    nodes: [
+      node("t1", "trigger.manual", { payloadJson: TRIGGER_PAYLOAD }),
+      // One of these two parallel actions is rigged to fail.
+      node("bad", "action.aiPrompt", { promptTemplate: "draft it" }, { simulateFailure: true }),
+      node("good", "action.textFormatter", { template: "{{user.name}}" }),
+    ],
+    edges: [edge("t1", "bad"), edge("t1", "good")],
+  });
+
+  it("lets the healthy branch finish while the failing one errors", async () => {
+    const { nodes, edges } = build();
+    const result = await harness(nodes, edges).run({ speed: 2 });
+
+    const statuses = statusMapFromSteps(result.steps);
+    expect(statuses.get("bad")).toBe("error");
+    expect(statuses.get("good")).toBe("success");
+  });
+
+  it("marks the overall run failed even though a branch succeeded", async () => {
+    const { nodes, edges } = build();
+    const result = await harness(nodes, edges).run({ speed: 2 });
+
+    expect(result.status).toBe("failed");
+    expect(result.error).toBeDefined();
+  });
+
+  it("does not deliver a failed node's payload downstream", async () => {
+    const nodes = [
+      node("t1", "trigger.manual", { payloadJson: TRIGGER_PAYLOAD }),
+      node("bad", "action.aiPrompt", { promptTemplate: "draft it" }, { simulateFailure: true }),
+      node("after", "output.log"),
+    ];
+
+    const result = await harness(nodes, [edge("t1", "bad"), edge("bad", "after")]).run({
+      speed: 2,
+    });
+
+    expect(statusMapFromSteps(result.steps).get("after")).toBe("skipped");
   });
 });

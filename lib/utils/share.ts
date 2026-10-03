@@ -130,3 +130,19 @@ export function shareUrlLength(
   const prefix = base ?? (typeof window === "undefined" ? "" : `${window.location.origin}${window.location.pathname}`);
   return encodeWorkflow(input).length + SHARE_HASH_PREFIX.length + prefix.length;
 }
+
+
+/**
+ * The URL to leave in the address bar once a share link has been consumed.
+ *
+ * The `#flow=` hash has to go: `usePersistence` checks for it on every mount and
+ * returns before reading localStorage, so leaving it in place means a reload
+ * re-adopts the shared graph forever and the visitor's own workflow becomes
+ * unreachable. Stripping only the fragment keeps the path and query intact.
+ *
+ * Pure so the stripping is unit-tested rather than eyeballed.
+ */
+export function withoutShareHash(url: string): string {
+  const hashIndex = url.indexOf("#");
+  return hashIndex === -1 ? url : url.slice(0, hashIndex);
+}

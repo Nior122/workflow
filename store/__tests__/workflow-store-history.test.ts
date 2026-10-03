@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it } from "vitest";
-import { useWorkflowStore } from "../workflowStore";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { resetEditCoalescing, useWorkflowStore } from "../workflowStore";
 import { createFlowNode, resetNodeIdCounter } from "@/lib/engine/registry";
 import { createWorkflow } from "@/types/workflow";
 import { RUN_HISTORY_LIMIT } from "@/config/constants";
@@ -23,7 +23,14 @@ function baseline() {
 
 beforeEach(() => {
   resetNodeIdCounter();
+  resetEditCoalescing();
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date("2026-01-01T00:00:00Z"));
   useWorkflowStore.setState(baseline());
+});
+
+afterEach(() => {
+  vi.useRealTimers();
 });
 
 /** Add n nodes through the real action so each is recorded in history. */
@@ -327,5 +334,99 @@ describe("run history", () => {
     useWorkflowStore.getState().pushRun(makeRun(0));
     useWorkflowStore.getState().clearRunHistory();
     expect(useWorkflowStore.getState().runHistory).toHaveLength(0);
+  });
+});
+
+
+describe("config-edit coalescing", () => {
+  const setPrompt = (id: string, prompt: string) => {
+    const node = useWorkflowStore.getState().nodes.find((candidate) => candidate.id === id)!;
+    const config = node.data.config as Record<string, unknown>;
+    useWorkflowStore
+      .getState()
+      .updateNodeData(id, { config: { ...config, systemPrompt: prompt } as never });
+  };
+
+  it("collapses a burst of keystrokes into a single undo step", () => {
+    const [id] = addNodes(1);
+    const historyBefore = useWorkflowStore.getState().past.length;
+
+    // Typing "hello", one keystroke at a time, all inside the window.
+    for (const prompt of ["h", "he", "hel", "hell", "hello"]) setPrompt(id, prompt);
+
+    expect(
+      (useWorkflowStore.getState().nodes[0].data.config as { systemPrompt: string })
+        .systemPrompt,
+    ).toBe("hello");
+    expect(useWorkflowStore.getState().past.length).toBe(historyBefore + 1);
+  });
+
+  it("undoes a whole typed word in one step", () => {
+    const [id] = addNodes(1);
+    const original = useWorkflowStore.getState().nodes[0].data.config;
+
+    for (const prompt of ["d", "dr", "dra", "draf", "draft"]) setPrompt(id, prompt);
+    useWorkflowStore.getState().undo();
+
+    // Back to the untouched config in one step, not one character at a time.
+    expect(useWorkflowStore.getState().nodes[0].data.config).toEqual(original);
+  });
+
+  it("starts a new step once the coalescing window has passed", () => {
+    const [id] = addNodes(1);
+    setPrompt(id, "first");
+    const afterFirst = useWorkflowStore.getState().past.length;
+
+    vi.advanceTimersByTime(701);
+    setPrompt(id, "second");
+
+    expect(useWorkflowStore.getState().past.length).toBe(afterFirst + 1);
+  });
+
+  it("does not coalesce edits to a different field", () => {
+    const [id] = addNodes(1);
+    setPrompt(id, "a");
+    const afterFirst = useWorkflowStore.getState().past.length;
+
+    useWorkflowStore.getState().updateNodeData(id, { simulateFailure: true });
+
+    expect(useWorkflowStore.getState().past.length).toBe(afterFirst + 1);
+  });
+
+  it("does not coalesce edits to a different node", () => {
+    const [a, b] = addNodes(2);
+    setPrompt(a, "a");
+    const afterFirst = useWorkflowStore.getState().past.length;
+
+    setPrompt(b, "b");
+
+    expect(useWorkflowStore.getState().past.length).toBe(afterFirst + 1);
+  });
+
+  it("starts a fresh step after an undo, so the new edit is itself undoable", () => {
+    const [id] = addNodes(1);
+    setPrompt(id, "one");
+
+    useWorkflowStore.getState().undo();
+    const configAfterUndo = useWorkflowStore.getState().nodes[0].data.config;
+
+    setPrompt(id, "two");
+
+    // "two" got its own snapshot, so undoing returns to the post-undo state rather
+    // than leaving "two" stuck on the node.
+    useWorkflowStore.getState().undo();
+    expect(useWorkflowStore.getState().nodes[0].data.config).toEqual(configAfterUndo);
+  });
+
+  it("collapses rapid rename keystrokes too", () => {
+    const [id] = addNodes(1);
+    const historyBefore = useWorkflowStore.getState().past.length;
+
+    for (const label of ["S", "Se", "Sen", "Send"]) {
+      useWorkflowStore.getState().renameNode(id, label);
+    }
+
+    expect(useWorkflowStore.getState().nodes[0].data.label).toBe("Send");
+    expect(useWorkflowStore.getState().past.length).toBe(historyBefore + 1);
   });
 });

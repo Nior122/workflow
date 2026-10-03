@@ -19,6 +19,7 @@ import { useViewportTier } from "@/hooks/use-viewport-tier";
 import { useCanvasDrop } from "@/hooks/use-canvas-actions";
 import { getNodeUi } from "@/components/nodes/registry";
 import { useIsEmptyCanvas, useWorkflowStore } from "@/store/workflowStore";
+import { useUiStore } from "@/store/uiStore";
 import { GRID_DOT_SIZE, GRID_GAP, MAX_ZOOM, MIN_ZOOM } from "@/config/constants";
 import type { NodeType } from "@/types/nodes";
 import type { Viewport } from "@/types/workflow";
@@ -41,6 +42,15 @@ export function FlowCanvas({ minimapVisible }: { minimapVisible: boolean }) {
   const onConnect = useWorkflowStore((state) => state.onConnect);
   const setViewport = useWorkflowStore((state) => state.setViewport);
   const isEmpty = useIsEmptyCanvas();
+  const openInspector = useUiStore((state) => state.setPanel);
+
+  // onNodeClick fires for a click but not for a drag, which is exactly the
+  // distinction needed: tapping a node should reveal its inspector, while dragging
+  // one around must not throw a panel over the canvas.
+  const handleNodeClick = useCallback(
+    () => openInspector("inspector", true),
+    [openInspector],
+  );
 
   const canvasRef = useCanvasElement();
   const { onDragOver, onDrop } = useCanvasDrop();
@@ -66,6 +76,7 @@ export function FlowCanvas({ minimapVisible }: { minimapVisible: boolean }) {
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
+        onNodeClick={handleNodeClick}
         onDragOver={onDragOver}
         onDrop={onDrop}
         onMoveEnd={handleMoveEnd}

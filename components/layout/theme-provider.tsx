@@ -4,9 +4,8 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
-  useState,
+  useSyncExternalStore,
   type ReactNode,
 } from "react";
 import type { Theme } from "@/types/workflow";
@@ -22,9 +21,22 @@ type ThemeContextValue = {
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
-function readInitialTheme(): Theme {
-  if (typeof document === "undefined") return DEFAULT_THEME;
+function getSnapshot(): Theme {
   return document.documentElement.classList.contains("dark") ? "dark" : "light";
+}
+
+/**
+ * The server has no `<html>` class to read, so it always reports the default.
+ *
+ * This is the whole fix for the hydration mismatch: `useSyncExternalStore` renders
+ * the server snapshot during hydration and switches to the real value afterwards,
+ * which React treats as a store update rather than a mismatch. Reading `document`
+ * inside a `useState` initializer — the previous implementation — made the server
+ * tree and the first client tree genuinely different for anyone who had picked the
+ * light theme, producing a console warning and a wrong icon on first paint.
+ */
+function getServerSnapshot(): Theme {
+  return DEFAULT_THEME;
 }
 
 function applyTheme(theme: Theme) {
@@ -33,26 +45,34 @@ function applyTheme(theme: Theme) {
   root.style.colorScheme = theme;
 }
 
+const listeners = new Set<() => void>();
+
+function subscribe(onStoreChange: () => void): () => void {
+  listeners.add(onStoreChange);
+  return () => listeners.delete(onStoreChange);
+}
+
+function writeTheme(theme: Theme): void {
+  applyTheme(theme);
+  try {
+    localStorage.setItem(THEME_STORAGE_KEY, theme);
+  } catch {
+    // Private browsing or a full quota: the toggle still works for this session.
+  }
+  for (const listener of listeners) listener();
+}
+
 /**
  * Theme state lives in React (not Zustand) because it must run before first paint
  * to avoid a flash; `app/layout.tsx` sets the class from an inline script and this
  * provider simply adopts whatever is already on <html>.
  */
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>(readInitialTheme);
+  const theme = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 
-  useEffect(() => {
-    applyTheme(theme);
-    try {
-      localStorage.setItem(THEME_STORAGE_KEY, theme);
-    } catch {
-      // Private browsing or a full quota: the toggle still works for this session.
-    }
-  }, [theme]);
-
-  const setTheme = useCallback((next: Theme) => setThemeState(next), []);
+  const setTheme = useCallback((next: Theme) => writeTheme(next), []);
   const toggleTheme = useCallback(
-    () => setThemeState((current) => (current === "dark" ? "light" : "dark")),
+    () => writeTheme(getSnapshot() === "dark" ? "light" : "dark"),
     [],
   );
 
