@@ -94,6 +94,13 @@
     color-scheme: light;
   }
 
+  /* Smooth in-page anchor scrolling, but only for users who want motion. */
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
+  }
+
   html.dark {
     color-scheme: dark;
   }

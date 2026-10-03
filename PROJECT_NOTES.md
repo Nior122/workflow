@@ -644,5 +644,11 @@ Removed: the five unused `public/*.svg` boilerplate files and the empty `public/
   The only offered fix downgrades `eslint-config-next` to 14.x, which would break Next 16
   linting. **Not shipped to production; left as-is.** Revisit when upstream patches.
 - Landing page is hero-only by design; the animated demo and feature highlights are Phase 6.
+- **Fixed post-review:** the hero's "How it works" button was a dead anchor — it pointed at
+  `#how-it-works` but no element carried that id, so the click silently did nothing. Added the
+  real three-step section with `id="how-it-works"` plus `scroll-mt-8`, and gated
+  `scroll-behavior: smooth` behind `prefers-reduced-motion: no-preference`.
+  Lesson recorded: never ship an in-page anchor without asserting the target exists — verify
+  by diffing rendered `href="#..."` values against rendered `id="..."` values.
 - No browser-level test of drag-and-drop or handle-to-handle connection. The logic underneath
   both is unit-tested, but the pointer interaction itself is unverified in this sandbox.
