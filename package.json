@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "docs:screenshots": "node scripts/capture-screenshots.mjs"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "1.1.15",
@@ -40,5 +41,5 @@
     "typescript": "5.9.3",
     "vitest": "5.0.3"
   },
-  "description": "FlowForge — a visual workflow builder with a simulated execution engine"
+  "description": "FlowForge \u2014 a visual workflow builder with a simulated execution engine"
 }

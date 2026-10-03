@@ -511,7 +511,7 @@ export interface NodeUiDef {
       undo/redo, auto-layout.
 - [x] **Phase 6** — Landing page with looping animated demo, polish pass, accessibility pass,
       responsive fallback.
-- [ ] **Phase 7** — README (screenshots, architecture, "what I'd build next"), Vercel deploy prep.
+- [x] **Phase 7** — README (screenshots, architecture, "what I'd build next"), Vercel deploy prep.
 
 ---
 
@@ -911,3 +911,86 @@ three-step grid), `app/globals.css` (light-theme accent tokens),
 - No headless-browser run in this sandbox, so console-error freedom and the SMIL animation
   actually playing are asserted from the served markup, not observed in a browser.
 - Contrast was computed analytically from the token values; no screenshot diffing.
+
+### Phase 7 — README and Vercel deploy prep (COMPLETE)
+
+**Verification (all run, all green):**
+
+| Check | Command | Result |
+| --- | --- | --- |
+| Types | `npx tsc --noEmit` | exit 0 |
+| Lint | `npm run lint` | exit 0, 0 problems |
+| Unit tests | `npm test` | **184 passed** (10 files) |
+| Build | `npm run build` | ✓ Compiled successfully; `/`, `/_not-found`, `/builder` static |
+| Runtime | `next dev` on `0.0.0.0:3000` | `GET / 200`, `GET /builder 200`, `GET /does-not-exist 404` |
+| Engine purity (README claim) | `grep -rnE '^import .*(react\|@xyflow\|zustand)' lib/engine/` | **prints nothing**; verified the pattern *does* catch a violation by temporarily injecting `import { useState } from "react"` into `types.ts`, then restoring (`git diff` empty afterwards) |
+| Engine import surface | `grep -rho 'from "[^"]*"' lib/engine/**` | only `./…`, `@/config/constants`, `@/types/*` |
+| README versions | read back from `package.json` | next 16.3.8, react 19.2.8, ts 5.9.3, xyflow 12.12.0, zustand 5.0.15, framer-motion 14.0.0, lucide 1.51.0, lz-string 1.5.0, vitest 5.0.3 — all match the README |
+| README links | file existence | `docs/architecture.svg`, `PROJECT_NOTES.md`, `vercel.json`, `scripts/capture-screenshots.mjs` all present |
+| README facts | read from source | filter operators `equals/notEquals/contains/gt/lt` (`types/nodes.ts:83`), six statuses (`types/run.ts:5-11`), 184 tests / 10 files — all match |
+| `vercel.json` | `json.load` | valid |
+| Screenshot script | `npm run docs:screenshots` | exit 1 with the intended "Playwright is not installed" guidance, no stack trace |
+
+**Files created:** `README.md`, `docs/architecture.svg`, `scripts/capture-screenshots.mjs`,
+`vercel.json`.
+
+**Files changed:** `package.json` (+`docs:screenshots` script).
+
+**Decisions**
+
+1. **No screenshots in the repo, and the README says why.** There is no browser binary in
+   this sandbox: `npx playwright install --with-deps chromium` failed at the apt stage
+   (`Unable to locate package libxrandr2`, `xvfb`, …) and the plain
+   `npx playwright install chromium` failed to download Chrome for Testing — the same
+   network allowlist that blocks `ui.shadcn.com` and `fonts.googleapis.com`.
+   Committing AI-generated mockups of an app that already exists would be worse than an
+   honest gap, so the capture script ships instead and the README's screenshot section
+   explains the situation and lists the five planned captures.
+2. **`scripts/capture-screenshots.mjs` is real, not a stub.** It builds, spawns
+   `next start` on port 4310, waits for readiness, loads the Lead capture template through
+   the template gallery, clicks Run, and captures five views at `deviceScaleFactor: 2`.
+   Selectors target accessible names rather than CSS classes so they survive restyling.
+   **Not verified end-to-end** — it cannot be run here. Verified: syntax (`node --check`),
+   and the graceful no-Playwright path.
+3. **`vercel.json` is minimal on purpose.** Next.js needs no Vercel configuration; the file
+   exists to pin `npm ci`, `cleanUrls`, and three security headers
+   (`nosniff`, `DENY`, `strict-origin-when-cross-origin`).
+4. **The architecture diagram is hand-written SVG**, with every box corresponding to a file
+   that exists. Generated image tooling was not used, so it cannot drift into showing
+   modules that are not there.
+5. **The README's engine-purity grep was corrected.** The first version
+   (`grep -rn "from \"react\"\|@xyflow\|zustand"`) matched the comment in
+   `lib/engine/registry.ts` that *states* the rule, so it "failed" on clean code. Anchored to
+   `^import ` and then tested both directions.
+
+**Known issues / deferred**
+
+- The screenshot script has never run against a real browser. Selectors and the
+  `run completed` text match are the most likely things to need adjusting on first use.
+- No CI workflow file was added. The gate is reproducible locally
+  (`npx tsc --noEmit && npm run lint && npm test && npm run build`) but nothing enforces it.
+- Deployment itself was not performed — there is no Vercel project to push to from here.
+  The build is verified static and `vercel.json` is valid, but "deploy prep" means
+  *ready to deploy*, not *deployed*.
+
+---
+
+## 10. Final state
+
+All seven phases complete. The reproducible gate:
+
+```bash
+npx tsc --noEmit && npm run lint && npm test && npm run build
+```
+
+Last run: **tsc exit 0 · lint 0 errors 0 warnings · 184 tests passing across 10 files ·
+build compiled with `/`, `/_not-found` and `/builder` all prerendered static.**
+
+Test growth across the build: 32 (Phase 1) → 47 (Phase 2) → 126 (Phases 3–4) →
+159 (Phase 5, before the store tests) → **184 (Phase 5–7)**.
+
+Three real bugs were found by tests written *after* the code they cover, all in Phase 5:
+the store's inconsistent initial `workflows: []`, `createNewWorkflow` discarding the live
+canvas, and `buildShareUrl` throwing outside a browser. Phase 6's contrast audit found a
+fourth that no test could have caught: a WCAG AA failure hiding inside a CSS gradient that
+is clipped as text.
