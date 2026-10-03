@@ -994,3 +994,106 @@ the store's inconsistent initial `workflows: []`, `createNewWorkflow` discarding
 canvas, and `buildShareUrl` throwing outside a browser. Phase 6's contrast audit found a
 fourth that no test could have caught: a WCAG AA failure hiding inside a CSS gradient that
 is clipped as text.
+
+### Phase 8 — UI cleanup and true responsive support (COMPLETE)
+
+Client feedback: *"the ui design is not looking clean, and i need it to be working on
+desktop or mobile, responsive."* Two decisions taken via `ask_user`: **full editing on
+mobile via sheets**, and the **whole design pass** (density, top bar, layout, spacing).
+
+**Verification (all run, all green):**
+
+| Check | Command | Result |
+| --- | --- | --- |
+| Types | `npx tsc --noEmit` | exit 0 |
+| Lint | `npm run lint` | exit 0, 0 problems |
+| Unit tests | `npm test` | **184 passed** (10 files) |
+| Build | `npm run build` | ✓ Compiled successfully; `/`, `/_not-found`, `/builder` static |
+| Runtime | `next dev` | `GET / 200`, `GET /builder 200` |
+| SSR tier | grepped served `/builder` | renders the **wide** layout (`Node palette`, `Node inspector`, `Run console`, `Collapse`); the mobile dock is absent, as intended |
+| Compact tier | grepped `.next/static/chunks` | `Builder tools`, `Execution speed`, `Show node palette`, `Show node inspector`, `Tap Nodes below` all present in the client bundle |
+| CSS shipped | fetched served stylesheet | `scrollbar-width: thin`, `::-webkit-scrollbar-thumb`, `.h-13 { height: calc(var(--spacing) * 13) }`, `--glow-strength: .22` (light) |
+| Dead code | grepped | no `MOBILE_BREAKPOINT` refs, no `readOnly` refs, no `MobileNotice`, `useMediaQuery` consumed only by `use-viewport-tier` |
+
+**Files created:** `components/ui/sheet.tsx` (Radix bottom sheet),
+`components/layout/mobile-dock.tsx`, `hooks/use-viewport-tier.ts`,
+`components/canvas/connection-error-toast.tsx`.
+
+**Files changed:** `components/panels/{palette,inspector,bottom-panel}.tsx`,
+`components/nodes/base-node.tsx`, `components/layout/{app-shell,top-bar}.tsx`,
+`components/canvas/flow-canvas.tsx`, `components/panels/workflow-menu.tsx`,
+`app/globals.css`, `config/constants.ts`.
+
+**Removed:** `components/layout/mobile-notice.tsx` — the compact tier is a real editor
+now, so a banner explaining that editing is unavailable would be a lie.
+
+**What was actually wrong (diagnosed from the code, since this sandbox has no browser)**
+
+1. **The 1024px cliff.** Below it, palette, inspector and console all unmounted and the
+   canvas went read-only. Above it, a docked 256px palette plus 320px inspector left
+   **~448px of canvas at exactly 1024px** — the layout was unusable on both sides of its
+   own breakpoint.
+2. **Eleven controls in a 56px top bar** with no wrapping or hiding, two separate ways to
+   open Templates, and Delete/Clear sitting there despite Delete already being on the
+   keyboard and in the inspector.
+3. **Chrome overload.** Every palette row was a bordered card with its own bordered icon
+   tile, a two-line description and a grip icon — thirteen of them stacked. Every node
+   carried an accent spine, a bordered icon tile, an UPPERCASE category label *and* two
+   corner badges, so the category was stated three times.
+4. **Default OS scrollbars** inside a dark UI (no `scrollbar-*` rules at all).
+
+**Decisions**
+
+1. **Two tiers, not three.** A separate tablet band would need its own layout code for a
+   size range that is mostly landscape iPads, and those are better served by the overlay
+   layout than by three docked panels. Below 1024px everything is a sheet over a
+   full-bleed canvas; at or above it panels dock **and collapse to a rail**, which is what
+   fixes the 448px squeeze.
+2. **The tier query is written as a max-width.** `useMediaQuery`'s `getServerSnapshot`
+   returns false, so `min-width: 1024px` would have streamed the *mobile* dock to every
+   desktop and flipped it away on hydration. `max-width: 1023px` makes the server guess
+   "wide". Verified in the served HTML.
+3. **Shared bodies, two shells.** `RunPanelContent` and `InspectorContent` were extracted
+   so the docked panels and the mobile sheets render the *same* console and inspector
+   instead of two copies that would drift.
+4. **Speed control moved into the overflow menu below `sm`** rather than being dropped.
+   The inline control is `hidden sm:block` and the menu version is `sm:hidden`, so exactly
+   one renders at any width.
+5. **Flat palette rows** — hover wash instead of border + glow, borderless tinted icon,
+   one-line description, grip removed (drag remains as a progressive enhancement over
+   click-to-add). Added a search field, which doubles as the fast path on a phone.
+6. **Node chrome reduced** — UPPERCASE category label demoted to a quiet sentence-case
+   line, icon tile border dropped, padding tightened.
+7. **Theme-aware scrollbars** and glow strength reduced (light 0.28 → 0.22, dark
+   0.45 → 0.34).
+8. **Touch pan/pinch made explicit** on `<ReactFlow>` (`panOnDrag`, `zoomOnPinch`).
+9. **Empty-state copy is tier-aware** — it used to tell phone users to drag from a palette
+   that does not exist on their screen.
+
+**Bugs I introduced and caught during this pass**
+
+1. **Tab click collapsed the panel.** Extracting `RunPanelContent` reused
+   `onToggleCollapsed` for tab clicks, so selecting a tab on an open panel would *close*
+   it. Split into `onExpand` (tab click) and `onToggleCollapsed` (header button).
+2. **Unterminated JSX expression** — `id={`palette-${category}`` was missing its closing
+   brace after the palette rewrite.
+3. **Invented import paths again** (`listNodeDefs`/`AnyNodeTypeDef` from the UI registry
+   instead of `lib/engine/registry`). Read the committed file's imports instead of
+   guessing.
+4. **`useUiStore.getState()` read inside JSX** for `minimapVisible` — non-reactive, so the
+   minimap toggle would not re-render. Replaced with a selector.
+5. **Dropped `ConnectionErrorToast`** when rewriting the palette. Extracted to
+   `components/canvas/connection-error-toast.tsx`, which is where it belonged anyway, and
+   made it clear the bottom dock on narrow viewports.
+6. **Dead `tabHint` state** in the dock, set to false but never true. Removed.
+7. **Stale comment** in `globals.css` still citing the pre-fix light accent `#E2521B`.
+
+**Known issues / deferred**
+
+- **Layout is verified from markup and CSS, not from rendered pixels.** There is no browser
+  in this sandbox, so tier switching, sheet animation and the 360px top-bar budget are
+  reasoned about and checked structurally, not observed.
+- Sheet heights are fixed at `60dvh`; a drag-to-resize handle would be the obvious upgrade.
+- Multi-select uses `Shift`/`Meta`, which has no mobile equivalent — box selection by touch
+  is not implemented.
+- The compact tier has no minimap (screen space), so long flows rely on fit-to-view.

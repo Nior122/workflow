@@ -10,10 +10,12 @@ import {
 } from "@xyflow/react";
 import { nodeTypes } from "@/components/nodes";
 import { edgeTypes } from "@/components/edges";
+import { cn } from "@/lib/utils";
 import { ZoomControls } from "./zoom-controls";
 import { EmptyCanvas } from "./empty-canvas";
-import { ConnectionErrorToast } from "@/components/panels/palette";
+import { ConnectionErrorToast } from "./connection-error-toast";
 import { useCanvasElement } from "./canvas-context";
+import { useViewportTier } from "@/hooks/use-viewport-tier";
 import { useCanvasDrop } from "@/hooks/use-canvas-actions";
 import { getNodeUi } from "@/components/nodes/registry";
 import { useIsEmptyCanvas, useWorkflowStore } from "@/store/workflowStore";
@@ -31,14 +33,7 @@ const CONNECTION_MODE = ConnectionMode.Strict;
  * components never mutate the store, which avoids the drag-time double-render trap
  * recorded in PROJECT_NOTES.md §8.
  */
-export function FlowCanvas({
-  minimapVisible,
-  readOnly = false,
-}: {
-  minimapVisible: boolean;
-  /** Mobile fallback: pan and zoom still work, editing does not. */
-  readOnly?: boolean;
-}) {
+export function FlowCanvas({ minimapVisible }: { minimapVisible: boolean }) {
   const nodes = useWorkflowStore((state) => state.nodes);
   const edges = useWorkflowStore((state) => state.edges);
   const onNodesChange = useWorkflowStore((state) => state.onNodesChange);
@@ -75,15 +70,19 @@ export function FlowCanvas({
         onDrop={onDrop}
         onMoveEnd={handleMoveEnd}
         connectionMode={CONNECTION_MODE}
-        deleteKeyCode={readOnly ? null : ["Backspace", "Delete"]}
+        deleteKeyCode={["Backspace", "Delete"]}
         multiSelectionKeyCode={["Meta", "Shift", "Control"]}
         selectionKeyCode="Shift"
         minZoom={MIN_ZOOM}
         maxZoom={MAX_ZOOM}
         fitViewOptions={{ padding: 0.2 }}
-        nodesConnectable={!readOnly}
-        nodesDraggable={!readOnly}
-        elementsSelectable={!readOnly}
+        nodesConnectable
+        nodesDraggable
+        elementsSelectable
+        // One finger pans the canvas, two pinch-zoom. Without this the default
+        // wheel/trackpad zoom mapping swallows touch scroll on phones.
+        zoomOnPinch
+        panOnDrag
         elevateNodesOnSelect
         className="!bg-background"
       >
@@ -109,7 +108,7 @@ export function FlowCanvas({
         )}
       </ReactFlow>
 
-      <ZoomControls className="absolute bottom-5 left-5 z-10" />
+      <TierAwareZoomControls />
 
       {isEmpty && <EmptyCanvas />}
 
@@ -122,5 +121,24 @@ export function FlowCanvas({
           : `Canvas has ${nodes.length} node${nodes.length === 1 ? "" : "s"} and ${edges.length} connection${edges.length === 1 ? "" : "s"}.`}
       </p>
     </div>
+  );
+}
+
+
+/**
+ * Zoom controls, moved out of the way of the bottom app bar on narrow viewports.
+ * Bottom-left is fine when the console is docked; on a phone that is exactly where
+ * the dock lives.
+ */
+function TierAwareZoomControls() {
+  const tier = useViewportTier();
+
+  return (
+    <ZoomControls
+      className={cn(
+        "absolute z-10",
+        tier === "compact" ? "top-3 right-3" : "bottom-5 left-5",
+      )}
+    />
   );
 }

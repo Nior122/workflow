@@ -1,13 +1,13 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { AlertCircle, GripVertical, X } from "lucide-react";
+import { Check, Plus, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { NODE_DRAG_TYPE } from "@/config/constants";
-import { CATEGORY_LABEL } from "@/config/theme";
 import { listNodeDefs, type AnyNodeTypeDef } from "@/lib/engine/registry";
 import { getNodeUi } from "@/components/nodes/registry";
+import { NODE_DRAG_TYPE } from "@/config/constants";
+import { CATEGORY_LABEL } from "@/config/theme";
 import { useWorkflowStore } from "@/store/workflowStore";
 import { useIsRunning } from "@/store/uiStore";
 import type { NodeCategory, NodeType } from "@/types/nodes";
@@ -15,16 +15,28 @@ import type { NodeCategory, NodeType } from "@/types/nodes";
 const CATEGORY_ORDER: NodeCategory[] = ["trigger", "action", "output"];
 
 /**
- * Left-hand palette.
+ * Node palette.
  *
- * Items are real <button>s, so the palette is fully keyboard-operable: Enter or
- * Space adds the node to the centre of the current viewport. Drag-and-drop is a
- * progressive enhancement on top of that, not the only path.
+ * Rows are deliberately flat — no border, no shadow, no glow. Thirteen bordered
+ * cards stacked vertically is a wall of chrome; a quiet list with a hover wash and
+ * one accent-coloured icon per row carries the same information with far less
+ * noise. Drag is still available, but it is an enhancement on top of click-to-add
+ * rather than the only path, so the grip affordance is gone.
  */
-export function Palette({ onAddAtViewportCenter }: { onAddAtViewportCenter: () => { x: number; y: number } }) {
+export function Palette({
+  onAddAtViewportCenter,
+  onNodeAdded,
+  className,
+}: {
+  onAddAtViewportCenter: () => { x: number; y: number };
+  /** Lets a mobile sheet close itself after an add. */
+  onNodeAdded?: () => void;
+  className?: string;
+}) {
   const addNode = useWorkflowStore((state) => state.addNode);
   const isRunning = useIsRunning();
   const [addedType, setAddedType] = useState<NodeType | null>(null);
+  const [query, setQuery] = useState("");
 
   const handleAdd = useCallback(
     (type: NodeType) => {
@@ -34,72 +46,112 @@ export function Palette({ onAddAtViewportCenter }: { onAddAtViewportCenter: () =
       if (id) {
         setAddedType(type);
         window.setTimeout(() => setAddedType((current) => (current === type ? null : current)), 900);
+        onNodeAdded?.();
       }
     },
-    [addNode, isRunning, onAddAtViewportCenter],
+    [addNode, isRunning, onAddAtViewportCenter, onNodeAdded],
   );
 
-  const grouped = CATEGORY_ORDER.map((category) => ({
-    category,
-    defs: listNodeDefs().filter((def) => def.category === category),
-  })).filter((group) => group.defs.length > 0);
+  const trimmed = query.trim().toLowerCase();
+
+  const grouped = useMemo(
+    () =>
+      CATEGORY_ORDER.map((category) => ({
+        category,
+        defs: listNodeDefs().filter((def) => {
+          if (def.category !== category) return false;
+          if (!trimmed) return true;
+          return (
+            def.title.toLowerCase().includes(trimmed) ||
+            def.description.toLowerCase().includes(trimmed)
+          );
+        }),
+      })).filter((group) => group.defs.length > 0),
+    [trimmed],
+  );
+
+  const total = listNodeDefs().length;
+  const visible = grouped.reduce((sum, group) => sum + group.defs.length, 0);
 
   return (
     <nav
       aria-label="Node palette"
       className={cn(
-        "flex h-full w-64 shrink-0 flex-col border-r border-border bg-surface",
+        "flex h-full min-h-0 flex-col bg-surface",
         isRunning && "pointer-events-none opacity-60",
+        className,
       )}
     >
-      <header className="border-b border-border px-4 py-3">
-        <h2 className="text-sm font-semibold text-foreground">Nodes</h2>
-        <p className="mt-0.5 text-xs text-muted-foreground">
-          Drag onto the canvas, or focus and press Enter.
-        </p>
-      </header>
-
-      <div className="flex-1 space-y-5 overflow-y-auto px-3 py-4">
-        {grouped.map(({ category, defs }) => (
-          <section key={category} aria-labelledby={`palette-${category}`}>
-            <h3
-              id={`palette-${category}`}
-              className="px-1 pb-2 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase"
-            >
-              {CATEGORY_LABEL[category]}s
-            </h3>
-
-            <ul className="space-y-1.5">
-              {defs.map((def) => (
-                <li key={def.type}>
-                  <PaletteItem
-                    def={def}
-                    disabled={isRunning}
-                    justAdded={addedType === def.type}
-                    onAdd={handleAdd}
-                  />
-                </li>
-              ))}
-            </ul>
-          </section>
-        ))}
+      <div className="shrink-0 border-b border-border/70 px-3 py-2.5">
+        <label className="relative flex items-center">
+          <Search
+            className="pointer-events-none absolute left-2.5 size-3.5 text-muted-foreground"
+            aria-hidden
+          />
+          <span className="sr-only">Filter nodes</span>
+          <input
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder={`Search ${total} nodes`}
+            className={cn(
+              "h-8 w-full rounded-md border border-border bg-surface-raised pr-2.5 pl-8",
+              "text-xs text-foreground placeholder:text-muted-foreground",
+              "focus:border-accent focus:outline-none",
+              "[&::-webkit-search-cancel-button]:appearance-none",
+            )}
+          />
+        </label>
       </div>
 
-      <footer className="border-t border-border px-4 py-3 text-[11px] text-muted-foreground">
-        {listNodeDefs().length} node types available
-      </footer>
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 py-2">
+        {visible === 0 ? (
+          <p className="px-2 py-8 text-center text-xs leading-relaxed text-muted-foreground">
+            No node matches “{query.trim()}”.
+          </p>
+        ) : (
+          <div className="space-y-4">
+            {grouped.map(({ category, defs }) => (
+              <section key={category} aria-labelledby={`palette-${category}`}>
+                <h3
+                  id={`palette-${category}`}
+                  className="px-2 pb-1 text-[10px] font-semibold tracking-[0.08em] text-muted-foreground uppercase"
+                >
+                  {CATEGORY_LABEL[category]}s
+                </h3>
+
+                <ul>
+                  {defs.map((def) => (
+                    <li key={def.type}>
+                      <PaletteItem
+                        def={def}
+                        disabled={isRunning}
+                        justAdded={addedType === def.type}
+                        onAdd={handleAdd}
+                      />
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ))}
+          </div>
+        )}
+      </div>
     </nav>
   );
 }
 
-type PaletteItemProps = {
+function PaletteItem({
+  def,
+  disabled,
+  justAdded,
+  onAdd,
+}: {
   def: AnyNodeTypeDef;
   disabled: boolean;
   justAdded: boolean;
   onAdd: (type: NodeType) => void;
-};
-
-function PaletteItem({ def, disabled, justAdded, onAdd }: PaletteItemProps) {
+}) {
   const ui = getNodeUi(def.type);
   const Icon = ui.icon;
 
@@ -115,83 +167,46 @@ function PaletteItem({ def, disabled, justAdded, onAdd }: PaletteItemProps) {
       onClick={() => onAdd(def.type)}
       aria-label={`Add ${def.title} node`}
       className={cn(
-        "group relative flex w-full cursor-grab items-start gap-2.5 rounded-md border border-border",
-        "bg-surface-raised px-3 py-2.5 text-left transition-all active:cursor-grabbing",
-        "hover:border-[color:var(--item-accent)]/60 hover:shadow-[0_0_16px_-6px_var(--item-accent)]",
+        "group flex w-full cursor-grab items-center gap-2.5 rounded-md px-2 py-2 text-left",
+        "transition-colors hover:bg-surface-raised active:cursor-grabbing",
         "disabled:cursor-not-allowed disabled:opacity-50",
       )}
-      style={{ ["--item-accent" as string]: ui.accent }}
     >
       <span
         aria-hidden
-        className="mt-0.5 grid size-7 shrink-0 place-items-center rounded border"
-        style={{
-          borderColor: `${ui.accent}59`,
-          backgroundColor: `${ui.accent}24`,
-          color: ui.accent,
-        }}
+        className="grid size-6 shrink-0 place-items-center rounded"
+        style={{ color: ui.accent, backgroundColor: `${ui.accent}1f` }}
       >
         <Icon className="size-3.5" strokeWidth={2.2} />
       </span>
 
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-[13px] font-medium text-foreground">
+        <span className="block truncate text-[13px] leading-tight font-medium text-foreground">
           {def.title}
         </span>
-        <span className="mt-0.5 line-clamp-2 block text-[11px] leading-snug text-muted-foreground">
+        <span className="mt-0.5 block truncate text-[11px] leading-tight text-muted-foreground">
           {def.description}
         </span>
       </span>
 
-      <GripVertical
-        aria-hidden
-        className="mt-1 size-3.5 shrink-0 text-muted-foreground/40 transition-colors group-hover:text-muted-foreground"
-      />
-
-      <AnimatePresence>
-        {justAdded && (
-          <motion.span
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.8 }}
-            className="absolute right-2 text-[10px] font-medium text-success"
-          >
-            added
-          </motion.span>
-        )}
-      </AnimatePresence>
+      <span className="relative grid size-5 shrink-0 place-items-center">
+        <Plus
+          aria-hidden
+          className="size-3.5 text-muted-foreground/0 transition-colors group-hover:text-muted-foreground"
+        />
+        <AnimatePresence>
+          {justAdded && (
+            <motion.span
+              initial={{ opacity: 0, scale: 0.7 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.7 }}
+              className="absolute inset-0 grid place-items-center text-success"
+            >
+              <Check className="size-3.5" aria-hidden strokeWidth={3} />
+            </motion.span>
+          )}
+        </AnimatePresence>
+      </span>
     </button>
-  );
-}
-
-/** Shown when a connection is rejected, so the reason is never silent. */
-export function ConnectionErrorToast() {
-  const message = useWorkflowStore((state) => state.lastConnectionError);
-  const dismiss = useWorkflowStore((state) => state.dismissConnectionError);
-
-  return (
-    <AnimatePresence>
-      {message && (
-        <motion.div
-          role="status"
-          initial={{ opacity: 0, y: 12, scale: 0.96 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: 8, scale: 0.96 }}
-          transition={{ type: "spring", stiffness: 400, damping: 28 }}
-          className="pointer-events-auto absolute bottom-5 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-lg border border-error/40 bg-surface-raised px-3.5 py-2 shadow-lg"
-        >
-          <AlertCircle className="size-4 shrink-0 text-error" aria-hidden />
-          <span className="text-xs text-foreground">{message}</span>
-          <button
-            type="button"
-            onClick={dismiss}
-            aria-label="Dismiss"
-            className="ml-1 rounded p-0.5 text-muted-foreground transition-colors hover:text-foreground"
-          >
-            <X className="size-3.5" aria-hidden />
-          </button>
-        </motion.div>
-      )}
-    </AnimatePresence>
   );
 }

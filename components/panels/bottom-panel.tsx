@@ -9,15 +9,25 @@ import { useRunStore } from "@/store/runStore";
 type Tab = "console" | "history";
 
 /**
- * Collapsible bottom panel with two tabs.
+ * Tab strip plus console body.
  *
- * Height is user-adjustable by dragging the divider; it collapses to just the tab
- * strip so the canvas can take the whole screen while building.
+ * Extracted so the docked desktop panel and the mobile bottom sheet render exactly
+ * the same console instead of two copies drifting apart.
  */
-export function BottomPanel() {
+export function RunPanelContent({
+  collapsed = false,
+  onExpand,
+  onToggleCollapsed,
+  className,
+}: {
+  collapsed?: boolean;
+  /** Selecting a tab must open the panel, never collapse it. */
+  onExpand?: () => void;
+  /** Omitted inside a sheet, where there is nothing to collapse into. */
+  onToggleCollapsed?: () => void;
+  className?: string;
+}) {
   const [tab, setTab] = useState<Tab>("console");
-  const [height, setHeight] = useState(248);
-  const [collapsed, setCollapsed] = useState(false);
   const status = useRunStore((state) => state.status);
   const historyCount = useRunStore((state) => state.history.length);
 
@@ -25,6 +35,97 @@ export function BottomPanel() {
     { id: "console", label: "Console" },
     { id: "history", label: "History", badge: historyCount },
   ];
+
+  return (
+    <div className={cn("flex min-h-0 flex-1 flex-col", className)}>
+      <div className="flex h-10 shrink-0 items-center gap-1 px-3">
+        <div role="tablist" aria-label="Console views" className="flex items-center gap-1">
+          {tabs.map((entry) => (
+            <button
+              key={entry.id}
+              type="button"
+              role="tab"
+              id={`tab-${entry.id}`}
+              aria-selected={tab === entry.id && !collapsed}
+              aria-controls={`panel-${entry.id}`}
+              onClick={() => {
+                setTab(entry.id);
+                onExpand?.();
+              }}
+              className={cn(
+                "relative rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
+                tab === entry.id && !collapsed
+                  ? "text-foreground"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {entry.label}
+              {entry.badge !== undefined && entry.badge > 0 && (
+                <span className="ml-1.5 rounded-full bg-surface-raised px-1.5 py-0.5 font-mono text-[9px] text-muted-foreground tabular-nums">
+                  {entry.badge}
+                </span>
+              )}
+              {tab === entry.id && !collapsed && (
+                <span className="absolute inset-x-2 -bottom-[7px] h-0.5 rounded-full bg-accent" />
+              )}
+            </button>
+          ))}
+        </div>
+
+        {status === "running" && (
+          <span className="ml-2 flex items-center gap-1.5 font-mono text-[10px] text-accent">
+            <span className="size-1.5 animate-pulse rounded-full bg-accent" aria-hidden />
+            running
+          </span>
+        )}
+
+        {onToggleCollapsed && (
+          <button
+            type="button"
+            onClick={onToggleCollapsed}
+            aria-expanded={!collapsed}
+            aria-label={collapsed ? "Expand run console" : "Collapse run console"}
+            className="ml-auto rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-surface-raised hover:text-foreground"
+          >
+            {collapsed ? "Show" : "Hide"}
+          </button>
+        )}
+      </div>
+
+      {!collapsed && (
+        <div className="min-h-0 flex-1">
+          <div
+            id="panel-console"
+            role="tabpanel"
+            aria-labelledby="tab-console"
+            hidden={tab !== "console"}
+            className="h-full"
+          >
+            {tab === "console" && <RunConsole />}
+          </div>
+
+          <div
+            id="panel-history"
+            role="tabpanel"
+            aria-labelledby="tab-history"
+            hidden={tab !== "history"}
+            className="h-full"
+          >
+            {tab === "history" && <RunHistory />}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Docked, collapsible, drag-resizable bottom panel. Wide viewports only — narrow
+ * ones get the same content in a sheet.
+ */
+export function BottomPanel() {
+  const [height, setHeight] = useState(248);
+  const [collapsed, setCollapsed] = useState(false);
 
   return (
     <div
@@ -61,81 +162,11 @@ export function BottomPanel() {
         />
       )}
 
-      <div className="flex h-10 shrink-0 items-center gap-1 px-3">
-        <div role="tablist" aria-label="Console views" className="flex items-center gap-1">
-          {tabs.map((entry) => (
-            <button
-              key={entry.id}
-              type="button"
-              role="tab"
-              id={`tab-${entry.id}`}
-              aria-selected={tab === entry.id && !collapsed}
-              aria-controls={`panel-${entry.id}`}
-              onClick={() => {
-                setTab(entry.id);
-                setCollapsed(false);
-              }}
-              className={cn(
-                "relative rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
-                tab === entry.id && !collapsed
-                  ? "text-foreground"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              {entry.label}
-              {entry.badge !== undefined && entry.badge > 0 && (
-                <span className="ml-1.5 rounded-full bg-surface-raised px-1.5 py-0.5 font-mono text-[9px] text-muted-foreground tabular-nums">
-                  {entry.badge}
-                </span>
-              )}
-              {tab === entry.id && !collapsed && (
-                <span className="absolute inset-x-2 -bottom-[7px] h-0.5 rounded-full bg-accent" />
-              )}
-            </button>
-          ))}
-        </div>
-
-        {status === "running" && (
-          <span className="ml-2 flex items-center gap-1.5 font-mono text-[10px] text-accent">
-            <span className="size-1.5 animate-pulse rounded-full bg-accent" aria-hidden />
-            running
-          </span>
-        )}
-
-        <button
-          type="button"
-          onClick={() => setCollapsed((value) => !value)}
-          aria-expanded={!collapsed}
-          aria-label={collapsed ? "Expand run console" : "Collapse run console"}
-          className="ml-auto rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-surface-raised hover:text-foreground"
-        >
-          {collapsed ? "Show" : "Hide"}
-        </button>
-      </div>
-
-      {!collapsed && (
-        <div className="min-h-0 flex-1">
-          <div
-            id="panel-console"
-            role="tabpanel"
-            aria-labelledby="tab-console"
-            hidden={tab !== "console"}
-            className="h-full"
-          >
-            {tab === "console" && <RunConsole />}
-          </div>
-
-          <div
-            id="panel-history"
-            role="tabpanel"
-            aria-labelledby="tab-history"
-            hidden={tab !== "history"}
-            className="h-full"
-          >
-            {tab === "history" && <RunHistory />}
-          </div>
-        </div>
-      )}
+      <RunPanelContent
+        collapsed={collapsed}
+        onExpand={() => setCollapsed(false)}
+        onToggleCollapsed={() => setCollapsed((value) => !value)}
+      />
     </div>
   );
 }

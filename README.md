@@ -189,8 +189,19 @@ Accessibility beyond contrast: a global `:focus-visible` ring, palette items tha
 on the filter node rather than colour alone, and `prefers-reduced-motion` handling on the
 shake animation and the landing demo.
 
-Below the desktop breakpoint the canvas becomes genuinely read-only with a plain explanation,
-rather than shipping a crippled editor.
+### Responsive
+
+Two tiers, split at 1024px:
+
+- **Wide** — palette | canvas | inspector, all docked, each collapsing to a thin rail so the
+  canvas can take the full width. At 1024px a permanently docked palette and inspector left
+  only ~448px of canvas, which is why they collapse rather than merely hide.
+- **Compact** — full-bleed canvas with a bottom app bar. Nodes, Inspector and Console each
+  open as a bottom sheet over the canvas, so **the builder is fully editable on a phone**,
+  not a read-only preview. Touch pans the canvas, two fingers pinch-zoom.
+
+They share one implementation: `RunPanelContent` and `InspectorContent` are the same
+components in both shells, so the docked console and the sheet console cannot drift apart.
 
 ---
 
@@ -216,8 +227,9 @@ primitives in `components/ui`.
    cheap.
 4. **Collaborative editing.** The undo stack is a plain snapshot array, which would need to
    become an operation log (or CRDT) before it survives concurrent edits.
-5. **A mobile run console.** Read-only viewing works today, but the console unmounts on
-   narrow screens, so you can run a flow on a phone and have nowhere to read the result.
+5. **Touch-first editing refinements.** The mobile sheets work, but multi-select relies on
+   `Shift`/`Meta` with no touch equivalent, sheets are a fixed 60dvh rather than
+   drag-resizable, and the compact tier has no minimap.
 6. **Edge-case handling in the executor.** Per-node retry, timeout, and an explicit
    error-handling branch — the thing n8n and Make actually get used for.
 

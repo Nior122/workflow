@@ -23,8 +23,12 @@ export const DEFAULT_VIEWPORT = { x: 0, y: 0, zoom: 1 } as const;
 export const MIN_ZOOM = 0.15;
 export const MAX_ZOOM = 2.5;
 
-/** Below this width the builder switches to the read-only mobile view. */
-export const MOBILE_BREAKPOINT_PX = 1024;
+/**
+ * At or above this width the builder docks its panels; below it they become
+ * bottom sheets over a full-bleed canvas. 1024 is where a docked palette (256px)
+ * plus inspector (320px) still leaves the canvas enough room to be usable.
+ */
+export const WIDE_BREAKPOINT_PX = 1024;
 
 export const APP_NAME = "FlowForge";
 export const APP_URL = "https://flowforge.dev";

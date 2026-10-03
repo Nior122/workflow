@@ -19,30 +19,43 @@ import type { FlowNode, NodeConfig, NodeType } from "@/types/nodes";
  * Config edits go straight to the store, so the node body summary and the canvas
  * update on every keystroke. Forms lock while a run is in flight.
  */
-export function Inspector() {
+/**
+ * Inspector body without the panel chrome, so the docked aside and the mobile
+ * bottom sheet can share one implementation.
+ */
+export function InspectorContent() {
   const node = useSelectedNode();
 
   return (
+    <AnimatePresence mode="wait" initial={false}>
+      {node ? (
+        <motion.div
+          key={node.id}
+          initial={{ opacity: 0, x: 12 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: 12 }}
+          transition={{ duration: 0.16, ease: "easeOut" }}
+          className="flex min-h-0 flex-1 flex-col"
+        >
+          <InspectorBody node={node} />
+        </motion.div>
+      ) : (
+        <EmptyInspector key="empty" />
+      )}
+    </AnimatePresence>
+  );
+}
+
+export function Inspector({ className }: { className?: string }) {
+  return (
     <aside
       aria-label="Node inspector"
-      className="flex h-full w-80 shrink-0 flex-col border-l border-border bg-surface"
+      className={cn(
+        "flex h-full w-80 shrink-0 flex-col border-l border-border bg-surface",
+        className,
+      )}
     >
-      <AnimatePresence mode="wait" initial={false}>
-        {node ? (
-          <motion.div
-            key={node.id}
-            initial={{ opacity: 0, x: 12 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 12 }}
-            transition={{ duration: 0.16, ease: "easeOut" }}
-            className="flex min-h-0 flex-1 flex-col"
-          >
-            <InspectorBody node={node} />
-          </motion.div>
-        ) : (
-          <EmptyInspector key="empty" />
-        )}
-      </AnimatePresence>
+      <InspectorContent />
     </aside>
   );
 }

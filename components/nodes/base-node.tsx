@@ -141,12 +141,13 @@ function BaseNodeInner({
         </Tooltip>
       )}
 
-      <header className="flex items-start gap-2.5 px-3.5 pt-3 pb-2">
+      <header className="flex items-center gap-2.5 px-3 py-2.5">
+        {/* Tinted, borderless: the accent colour already carries the category, so a
+            bordered tile plus an uppercase label was saying the same thing twice. */}
         <span
           aria-hidden
-          className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-md border"
+          className="mt-px grid size-7 shrink-0 place-items-center rounded-md"
           style={{
-            borderColor: "rgb(var(--node-accent-rgb) / 0.35)",
             backgroundColor: "rgb(var(--node-accent-rgb) / 0.14)",
             color: "var(--node-accent)",
           }}
@@ -155,17 +156,17 @@ function BaseNodeInner({
         </span>
 
         <div className="min-w-0 flex-1">
-          <h3 className="truncate text-sm leading-tight font-semibold text-foreground">
+          <h3 className="truncate text-[13px] leading-tight font-semibold text-foreground">
             {label}
           </h3>
-          <p className="mt-0.5 text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
+          <p className="mt-0.5 text-[11px] leading-tight text-muted-foreground">
             {CATEGORY_LABEL[category]}
           </p>
         </div>
       </header>
 
       {(summary || children) && (
-        <div className="border-t border-border/70 px-3.5 py-2.5">
+        <div className="border-t border-border/70 px-3 py-2">
           {summary}
           {children}
         </div>

@@ -5,6 +5,7 @@ import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import {
   Check,
   Download,
+  Eraser,
   FilePlus2,
   LayoutTemplate,
   LayoutGrid,
@@ -19,6 +20,8 @@ import { buildShareUrl } from "@/lib/utils/share";
 import { useWorkflowStore } from "@/store/workflowStore";
 import { useRunStore } from "@/store/runStore";
 import { useUiStore } from "@/store/uiStore";
+import { EXECUTION_SPEEDS } from "@/config/constants";
+import type { ExecutionSpeed } from "@/types/run";
 import { isWorkflow, type Workflow } from "@/types/workflow";
 import type { FlowEdge, FlowNode } from "@/types";
 
@@ -44,9 +47,15 @@ export function WorkflowMenu({ onOpenTemplates }: { onOpenTemplates: () => void 
   const redo = useWorkflowStore((state) => state.redo);
   const canUndo = useWorkflowStore((state) => state.past.length > 0);
   const canRedo = useWorkflowStore((state) => state.future.length > 0);
+  const workflows = useWorkflowStore((state) => state.workflows);
+  const activeWorkflowId = useWorkflowStore((state) => state.activeWorkflowId);
+  const switchWorkflow = useWorkflowStore((state) => state.switchWorkflow);
+  const clear = useWorkflowStore((state) => state.clear);
 
   const resetStatuses = useRunStore((state) => state.resetStatuses);
   const isRunning = useUiStore((state) => state.isRunning);
+  const speed = useUiStore((state) => state.speed);
+  const setSpeed = useUiStore((state) => state.setSpeed);
 
   const flash = (next: Toast) => {
     setToast(next);
@@ -181,6 +190,34 @@ export function WorkflowMenu({ onOpenTemplates }: { onOpenTemplates: () => void 
               Templates…
             </DropdownMenu.Item>
 
+            {workflows.length > 1 && (
+              <>
+                <DropdownMenu.Separator className="my-1.5 h-px bg-border" />
+                <DropdownMenu.Label className="px-2.5 pt-1 pb-1 text-[10px] font-semibold tracking-[0.08em] text-muted-foreground uppercase">
+                  Switch to
+                </DropdownMenu.Label>
+                {workflows.map((workflow) => (
+                  <DropdownMenu.Item
+                    key={workflow.id}
+                    className={itemClass}
+                    disabled={workflow.id === activeWorkflowId}
+                    onSelect={() => switchWorkflow(workflow.id)}
+                  >
+                    <Check
+                      className={cn(
+                        "size-3.5",
+                        workflow.id === activeWorkflowId
+                          ? "text-accent"
+                          : "text-transparent",
+                      )}
+                      aria-hidden
+                    />
+                    <span className="truncate">{workflow.name}</span>
+                  </DropdownMenu.Item>
+                ))}
+              </>
+            )}
+
             <DropdownMenu.Separator className="my-1.5 h-px bg-border" />
 
             <DropdownMenu.Item className={itemClass} onSelect={handleAutoLayout} disabled={nodes.length === 0}>
@@ -198,6 +235,44 @@ export function WorkflowMenu({ onOpenTemplates }: { onOpenTemplates: () => void 
               <Redo2 className="size-3.5 text-muted-foreground" aria-hidden />
               Redo
               <span className="ml-auto font-mono text-[10px] text-muted-foreground">⇧⌘Z</span>
+            </DropdownMenu.Item>
+
+            <DropdownMenu.Separator className="my-1.5 h-px bg-border sm:hidden" />
+
+            {/* Narrow viewports hide the inline speed control, so it lives here.
+                The two never render at the same width. */}
+            <div className="sm:hidden">
+              <DropdownMenu.Label className="px-2.5 pt-1 pb-1 text-[10px] font-semibold tracking-[0.08em] text-muted-foreground uppercase">
+                Execution speed
+              </DropdownMenu.Label>
+              {EXECUTION_SPEEDS.map((option) => (
+                <DropdownMenu.Item
+                  key={option}
+                  className={itemClass}
+                  disabled={isRunning || speed === option}
+                  onSelect={() => setSpeed(option as ExecutionSpeed)}
+                >
+                  <Check
+                    className={cn(
+                      "size-3.5",
+                      speed === option ? "text-accent" : "text-transparent",
+                    )}
+                    aria-hidden
+                  />
+                  <span className="font-mono text-[11px]">{option}×</span>
+                </DropdownMenu.Item>
+              ))}
+            </div>
+
+            <DropdownMenu.Separator className="my-1.5 h-px bg-border" />
+
+            <DropdownMenu.Item
+              className={cn(itemClass, "text-error data-[highlighted]:text-error")}
+              onSelect={clear}
+              disabled={nodes.length === 0}
+            >
+              <Eraser className="size-3.5" aria-hidden />
+              Clear canvas
             </DropdownMenu.Item>
 
             <DropdownMenu.Separator className="my-1.5 h-px bg-border" />
