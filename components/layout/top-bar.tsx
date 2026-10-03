@@ -141,7 +141,7 @@ export function TopBar() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -6 }}
             className={cn(
-              "absolute top-full left-1/2 z-30 mt-2 flex w-[min(28rem,calc(100%-2rem))] -translate-x-1/2",
+              "absolute top-full left-1/2 z-dock mt-2 flex w-[min(28rem,calc(100%-2rem))] -translate-x-1/2",
               "items-center gap-2 rounded-lg border border-error/40 bg-surface-raised px-3.5 py-2 shadow-lg",
             )}
           >

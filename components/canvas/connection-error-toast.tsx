@@ -27,9 +27,17 @@ export function ConnectionErrorToast() {
           exit={{ opacity: 0, y: 8, scale: 0.96 }}
           transition={{ type: "spring", stiffness: 400, damping: 28 }}
           className={cn(
-            "pointer-events-auto absolute left-1/2 z-20 flex w-[min(26rem,calc(100%-2rem))] -translate-x-1/2",
-            "items-center gap-2 rounded-lg border border-error/40 bg-surface-raised px-3.5 py-2 shadow-lg",
-            tier === "compact" ? "bottom-24" : "bottom-5",
+            "pointer-events-auto absolute flex items-center gap-2 rounded-lg border",
+            "border-error/40 bg-surface-raised px-3.5 py-2 shadow-lg",
+            // Compact: centred, lifted clear of the dock.
+            // Wide: pinned to the left edge one step ABOVE the zoom controls
+            // instead of centred at the same height. Centring it put it in the
+            // same band as the zoom controls, and at a narrow canvas (1024px
+            // viewport with both rails open leaves ~448px) the two collided.
+            // Stacking them shares one column and can never overlap, at any width.
+            tier === "compact"
+              ? "bottom-24 left-1/2 w-[min(26rem,calc(100%-2rem))] -translate-x-1/2 z-canvas-toast"
+              : "bottom-16 left-5 w-[min(26rem,calc(100%-2.5rem))] z-canvas-toast",
           )}
         >
           <AlertCircle className="size-4 shrink-0 text-error" aria-hidden />

@@ -3,10 +3,10 @@
 > **Living document.** Re-read this file at the start of every phase. Update it at the end of
 > every phase (tick the phase, list files, record decisions, list known issues).
 >
-> Status: **Build phases 1–8 complete. QA Phase 1 (audit) and QA Phase 2 (P0/P1 fixes)
-> complete.** Awaiting "continue" to start QA Phase 3 (builder shell layout).
+> Status: **Build phases 1–8 complete. QA Phases 1 (audit), 2 (P0/P1 fixes) and 3 (layout
+> + z-index scale) complete.** Awaiting "continue" to start QA Phase 4 (UX polish).
 > Branch `arena/01a102bb-workflow`. All gates green: `tsc --noEmit` 0, `eslint` 0/0,
-> **208 unit tests / 11 files**, `next build` (3 static routes), and a live `next dev`
+> **221 unit tests / 12 files**, `next build` (3 static routes), and a live `next dev`
 > server returning 200 on `/` and `/builder`.
 > The QA audit itself lives in **`FIXES.md`** — that is the current source of truth for
 > known issues. Sections 1–11 below describe the build; issue numbers there predate the
@@ -1102,3 +1102,38 @@ now, so a banner explaining that editing is unavailable would be a lie.
 - Multi-select uses `Shift`/`Meta`, which has no mobile equivalent — box selection by touch
   is not implemented.
 - The compact tier has no minimap (screen space), so long flows rely on fit-to-view.
+
+
+### QA Phase 3 — Builder shell as one CSS grid + single z-index scale (COMPLETE)
+
+**Decision:** the shell is now a single CSS grid in both tiers, not nested flex. Wide tier:
+`grid-template-rows: auto minmax(0, 1fr) auto` × `grid-template-columns:
+<palette> minmax(0, 1fr) <inspector>`. The canvas owns row 2 / column 2 outright, which is
+what makes "canvas never under another panel" structural rather than a z-index convention.
+
+**New file:** `components/layout/shell-tracks.ts` — the track widths and the canvas-width
+arithmetic, imported by `app-shell.tsx` and tested by
+`components/layout/__tests__/shell-tracks.test.ts` (13 tests). Because the component
+renders `builderGridColumns()` directly, the tests assert against the string that reaches
+the DOM. Canvas widths: 1024→448px, 1280→704px, 1440→864px, 1920→1344px.
+
+**Z-index is now defined in exactly one place** — the `@theme` block in `app/globals.css`
+(`z-page` 10, `z-canvas-overlay` 10, `z-canvas-toast` 20, `z-dock` 30, `z-menu` 40,
+`z-overlay` 50). 19 raw numeric z-utilities were replaced across 12 files. Add a layer
+there; never hand-write `z-[N]` in a component.
+
+**Two places deliberately do NOT have `overflow: hidden`**, because clipping them would
+have hidden something: `ShellHeader` (the top bar's blocking-error alert is `absolute
+top-full`, below the bar's box) and `BottomPanel` (its resize handle is at `-top-1`). Both
+carry `min-w-0` instead, which is the part that actually protects the grid tracks.
+
+**Retracted finding #8:** rubber-band multi-select already worked via Shift+drag. I had
+read `selectionOnDrag` being unset as "no drag-select", but `@xyflow/react` enables the
+selection box whenever `selectionKeyCode` is held, and `selectionOnDrag` is inert while
+`panOnDrag === true` anyway. No code changed.
+
+**#10 resolved as option (a)** — no 768px message; phones keep full editing.
+
+**Known limitation:** no browser in this sandbox, so the layout is verified from served
+markup, compiled CSS and executed track arithmetic — never from pixels. Phase 5 screenshots
+remain impossible.

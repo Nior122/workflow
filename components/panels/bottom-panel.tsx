@@ -129,7 +129,12 @@ export function BottomPanel() {
 
   return (
     <div
-      className="relative flex shrink-0 flex-col border-t border-border bg-surface"
+      // Full-width grid row. Deliberately NOT `overflow-hidden`: the resize
+      // handle sits at `-top-1`, so clipping here would cut off the half of it
+      // that hangs above the panel. Content containment happens on the inner
+      // wrapper instead, and `min-w-0` is what actually stops a long console
+      // line from widening the track.
+      className="relative col-span-full flex min-w-0 flex-col border-t border-border bg-surface"
       style={{ height: collapsed ? 40 : height }}
     >
       {!collapsed && (
@@ -166,6 +171,7 @@ export function BottomPanel() {
         collapsed={collapsed}
         onExpand={() => setCollapsed(false)}
         onToggleCollapsed={() => setCollapsed((value) => !value)}
+        className="overflow-hidden"
       />
     </div>
   );

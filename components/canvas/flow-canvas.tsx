@@ -108,7 +108,13 @@ export function FlowCanvas({ minimapVisible }: { minimapVisible: boolean }) {
           <MiniMap
             pannable
             zoomable
-            position="bottom-right"
+            // Top-right, deliberately. React Flow pins its own attribution to
+            // bottom-right (kept, per their terms) and the zoom controls own
+            // bottom-left, so bottom-right was the one corner where two panels
+            // were painted on top of each other. All four corners now have at
+            // most one occupant, and this is hidden when the canvas is empty so
+            // it can never meet the empty state.
+            position="top-right"
             className="!bg-surface"
             maskColor="hsl(var(--background) / 0.72)"
             nodeColor={(node) =>
@@ -147,7 +153,7 @@ function TierAwareZoomControls() {
   return (
     <ZoomControls
       className={cn(
-        "absolute z-10",
+        "absolute z-canvas-overlay",
         tier === "compact" ? "top-3 right-3" : "bottom-5 left-5",
       )}
     />

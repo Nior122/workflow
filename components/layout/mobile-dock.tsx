@@ -65,7 +65,7 @@ export function MobileDock() {
       <nav
         aria-label="Builder tools"
         className={cn(
-          "z-30 flex shrink-0 items-stretch border-t border-border bg-surface",
+          "z-dock flex shrink-0 items-stretch border-t border-border bg-surface",
           "pb-[env(safe-area-inset-bottom)]",
         )}
       >

@@ -31,7 +31,7 @@ function SheetContent({
       <DialogPrimitive.Overlay
         data-slot="sheet-overlay"
         className={cn(
-          "fixed inset-0 z-50 bg-background/70 backdrop-blur-sm",
+          "fixed inset-0 z-overlay bg-background/70 backdrop-blur-sm",
           "data-[state=open]:animate-in data-[state=closed]:animate-out",
           "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
         )}
@@ -39,7 +39,7 @@ function SheetContent({
       <DialogPrimitive.Content
         data-slot="sheet-content"
         className={cn(
-          "fixed inset-x-0 bottom-0 z-50 flex max-h-[82dvh] flex-col",
+          "fixed inset-x-0 bottom-0 z-overlay flex max-h-[82dvh] flex-col",
           "rounded-t-2xl border-t border-border bg-surface shadow-2xl",
           // Slide up rather than zoom — reads as a sheet, not a modal.
           "data-[state=open]:animate-in data-[state=closed]:animate-out",

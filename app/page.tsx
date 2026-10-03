@@ -28,7 +28,7 @@ export default function LandingPage() {
         }}
       />
 
-      <header className="relative z-10 flex h-16 items-center justify-between px-6">
+      <header className="relative z-page flex h-16 items-center justify-between px-6">
         <span className="flex items-center gap-2">
           <span className="bg-gradient-ember grid size-8 place-items-center rounded-md text-accent-contrast">
             <Flame className="size-4" aria-hidden strokeWidth={2.4} />
@@ -41,7 +41,7 @@ export default function LandingPage() {
         </Button>
       </header>
 
-      <section className="relative z-10 flex flex-col items-center px-6 pt-12 pb-4 text-center sm:pt-16">
+      <section className="relative z-page flex flex-col items-center px-6 pt-12 pb-4 text-center sm:pt-16">
         <span className="rounded-full border border-accent/30 bg-accent/10 px-3 py-1 font-mono text-[11px] tracking-wide text-accent uppercase">
           visual workflow builder
         </span>
@@ -74,7 +74,7 @@ export default function LandingPage() {
       <section
         id="demo"
         aria-labelledby="demo-heading"
-        className="relative z-10 scroll-mt-8 px-6 py-10"
+        className="relative z-page scroll-mt-8 px-6 py-10"
       >
         <div className="mx-auto max-w-4xl">
           <h2 id="demo-heading" className="sr-only">
@@ -91,7 +91,7 @@ export default function LandingPage() {
 
       <FeatureGrid />
 
-      <footer className="relative z-10 mt-auto border-t border-border px-6 py-5 text-center text-xs text-muted-foreground">
+      <footer className="relative z-page mt-auto border-t border-border px-6 py-5 text-center text-xs text-muted-foreground">
         Built with Next.js, React Flow and Zustand. All integrations simulated.
       </footer>
     </main>

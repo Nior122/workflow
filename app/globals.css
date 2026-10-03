@@ -90,6 +90,33 @@
   --radius-md: calc(var(--radius) - 3px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+
+  /* ------------------------------------------------------------------
+     Z-INDEX SCALE — the single source of truth for stacking order.
+
+     Add a layer here; never hand-write `z-[N]` or a bare `z-50` in a
+     component. Each step is 10 apart so a new layer can be inserted
+     between two existing ones without renumbering.
+
+       canvas-overlay  things pinned inside the canvas: empty state,
+                       zoom controls, node status chips. React Flow's own
+                       panels (minimap, attribution) sit at z-index 5, so
+                       this step already clears them.
+       canvas-toast    transient canvas feedback (connection errors).
+       dock            persistent app chrome: top bar, mobile dock.
+       menu            dropdown/popover content anchored to the chrome.
+       overlay         modal surfaces: dialog, sheet, tooltip.
+
+       page            marketing-page content sitting above its own
+                       decorative backgrounds. Unrelated to the builder.
+
+     ------------------------------------------------------------------ */
+  --z-index-page: 10;
+  --z-index-canvas-overlay: 10;
+  --z-index-canvas-toast: 20;
+  --z-index-dock: 30;
+  --z-index-menu: 40;
+  --z-index-overlay: 50;
 }
 
 @layer base {

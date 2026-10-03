@@ -115,7 +115,7 @@ produce a console warning, but I have not seen it printed.
   ```
 - **Fix (Phase 2):** delete the key when there are no issues, so the next comparison
   sees `previous === []` and stops.
-- **Status:** OPEN
+- **Status:** FIXED in Phase 2 — see below
 
 ### P1 — feature broken
 
@@ -128,7 +128,7 @@ produce a console warning, but I have not seen it printed.
   inspector calls it on every keystroke. Ten characters = ten undo steps.
 - **Fix (Phase 2):** coalesce rapid `updateNodeData` calls the same way node drags are
   already coalesced — snapshot on the first change of a burst, not every one.
-- **Status:** OPEN
+- **Status:** FIXED in Phase 2 — see below
 
 **#3 · A share link permanently shadows your own saved workflow** `[TRACED]`
 
@@ -139,7 +139,7 @@ produce a console warning, but I have not seen it printed.
   localStorage is never consulted again while the hash is in the URL.
 - **Fix (Phase 2):** clear the hash once adopted (`history.replaceState`), so the link is
   consumed exactly once.
-- **Status:** OPEN
+- **Status:** FIXED in Phase 2 — see below
 
 **#4 · Theme hydration mismatch for light-theme users** `[TRACED]`
 
@@ -154,7 +154,7 @@ produce a console warning, but I have not seen it printed.
   which is why it survived.
 - **Fix (Phase 2):** start from the server-safe default and adopt the real value after
   mount, or suppress only the dependent subtree.
-- **Status:** OPEN
+- **Status:** FIXED in Phase 2 — see below
 
 **#5 · The inspector does not open when a node is selected** `[TRACED]`
 
@@ -165,7 +165,7 @@ produce a console warning, but I have not seen it printed.
   tier, tapping a node only lights a dot on the dock — the sheet never opens.
 - **Fix (Phase 2):** open/expand the inspector on selection, guarded so a drag does not
   pop a sheet mid-gesture.
-- **Status:** OPEN
+- **Status:** FIXED in Phase 2 — see below
 
 ### P2 — visual / overlap
 
@@ -176,7 +176,7 @@ produce a console warning, but I have not seen it printed.
   `class="react-flow__panel react-flow__attribution bottom right"` and the MiniMap is
   `position="bottom-right"`. Both are absolutely positioned in the same corner.
 - **Fix (Phase 3):** move the MiniMap to `top-right`, or lift the attribution.
-- **Status:** OPEN
+- **Status:** FIXED in Phase 3 — see below
 
 **#7 · Connection-error toast collides with the zoom controls** `[TRACED]`
 
@@ -184,20 +184,33 @@ produce a console warning, but I have not seen it printed.
 - **Cause:** at a narrow wide-tier width (canvas ≈ 448 px at a 1024 px viewport), the
   centred toast is `min(26rem, 100%-2rem)` ≈ 416 px and the controls sit at
   `bottom-5 left-5`. Same band, overlapping x-range.
-- **Status:** OPEN
+- **Status:** FIXED in Phase 3 — see below
 
-**#8 · No rubber-band multi-select** `[TRACED]`
+**#8 · ~~No rubber-band multi-select~~ — MY AUDIT WAS WRONG, NOT A DEFECT** `[RETRACTED]`
 
 - **File:** `components/canvas/flow-canvas.tsx`
-- **Cause:** `selectionOnDrag` is unset and `panOnDrag` is true, so a drag pans. The
-  brief asked for multi-select; only Shift+click works today.
-- **Status:** OPEN
+- **What I claimed:** only Shift+click works, because `selectionOnDrag` is unset.
+- **What the installed source actually says** (`@xyflow/react@12.12.0`,
+  `dist/esm/index.mjs`):
+  - line 1491 — `const isSelectionActive = (selectionOnDrag && eventTargetIsContainer) || selectionKeyPressed;`
+  - line 2122 — `const isSelecting = selectionKeyPressed || userSelectionActive || _selectionOnDrag;`
+  - line 2124 — `panOnDrag: !selectionKeyPressed && panOnDrag`
+- We pass `selectionKeyCode="Shift"`, so `selectionKeyPressed` is true whenever Shift is
+  held, panning is suspended for that drag, and **Shift+drag already opens a rubber-band
+  selection box.** I conflated "Shift+drag" with "Shift+click" and never checked the
+  library.
+- Separately, line 2121 — `const _selectionOnDrag = selectionOnDrag && panOnDrag !== true;`
+  — means turning on `selectionOnDrag` would have been a **no-op** anyway while
+  `panOnDrag` is `true`. Unmodified drag-select requires giving up left-drag panning.
+  That is a deliberate interaction trade, not a bug, and I did not make it unilaterally.
+- **Status:** RETRACTED — no code change. Multi-select works via Shift+drag (and
+  Cmd/Ctrl+click to add).
 
 **#9 · z-index is ad hoc** `[TRACED]`
 
 - 10 / 20 / 30 / 40 / 50 spread across 8 files with no single scale. No collision today,
   but nothing prevents the next one.
-- **Status:** OPEN
+- **Status:** FIXED in Phase 3 — see below
 
 **#10 · Decision needed — the brief contradicts last turn's instruction**
 
@@ -209,7 +222,9 @@ produce a console warning, but I have not seen it printed.
   (a) keep full mobile editing and drop the 768px message,
   (b) restore the message below 768px and keep sheets from 768–1023px,
   (c) restore full read-only below 768px.
-- **Status:** BLOCKED ON YOUR DECISION
+- **Status:** RESOLVED — you said "continue" without picking, so I proceeded with **(a)**,
+  the option I recommended and the one that keeps the mobile editing you explicitly asked
+  for. No 768px message was added. Say the word to switch to (b) or (c).
 
 ### P3 — polish
 
@@ -391,9 +406,145 @@ Executor suite: 31 → **35 tests**.
   block this phase, but I need it before I start Phase 3.
 - #6–#9 (P2 visual/overlap) and #11–#17 (P3) are untouched, as planned.
 
-## Phase 3 — Layout and overlap (P2)
+## Phase 3 — Layout and overlap (P2) — COMPLETE
 
-_Not started._
+**Gate after the phase:** `tsc --noEmit` 0 · `eslint` 0/0 · **221 passed / 12 files**
+(was 208/11) · `next build` ✓ compiled, 3 static routes · `GET /builder 200`.
+
+### The shell is now one CSS grid
+
+`components/layout/app-shell.tsx` no longer nests flex boxes. Both tiers are a single
+grid, and the wide tier is exactly the shape your brief described:
+
+```
+row 1   [                 chrome                  ]   auto
+row 2   [ palette ][        canvas        ][ inspect ]   minmax(0, 1fr)
+row 3   [              run console                 ]   auto
+        16rem/2.5rem   minmax(0, 1fr)   20rem/2.5rem
+```
+
+Served markup, verified with `curl`:
+
+```
+grid-template-columns:16rem minmax(0, 1fr) 20rem;grid-template-rows:auto minmax(0, 1fr) auto
+```
+
+- **The canvas cannot sit under another panel.** It owns row 2 / column 2 outright. The
+  panels are siblings in adjacent tracks, not overlapping layers, so there is no z-order
+  or negative margin that could put one over the other.
+- **`minmax(0, 1fr)`, not `1fr`.** A bare `1fr` has an implicit `auto` minimum, so a long
+  label inside the canvas would widen the track and push the inspector off-screen.
+- **`min-width: 0` on every grid child**, which is what actually stops a track being
+  blown out by its contents.
+- **Collapsing a rail animates** via `transition-property: grid-template-columns`
+  (confirmed present in the compiled CSS), so it is a smooth resize rather than a jump.
+
+**Two deliberate exceptions to "`overflow: hidden` on grid children"**, both because
+following the instruction literally would have hidden something:
+
+1. `ShellHeader` is **not** clipped. The top bar's blocking-error alert is
+   `absolute top-full` — it hangs *below* the bar's box — so clipping the header would
+   have hidden the one message that tells you why a run was refused. I caught this while
+   auditing my own change, not from a test.
+2. `BottomPanel` is **not** clipped. Its resize handle sits at `-top-1`; clipping the root
+   would have cut off the half that hangs above the panel and broken dragging. Containment
+   is applied to the inner wrapper instead.
+
+### #6 · MiniMap on the attribution — FIXED
+
+`components/canvas/flow-canvas.tsx`: MiniMap `position="bottom-right"` → `"top-right"`.
+
+All four canvas corners now have at most one occupant: **top-right** minimap,
+**bottom-left** zoom controls, **bottom-right** React Flow attribution (kept and visible,
+per their terms — it was *moved around*, never hidden), **top-left** free. The minimap is
+already hidden on an empty canvas (`minimapVisible && !isEmpty`), so it can never meet the
+empty state.
+
+### #7 · Toast colliding with the zoom controls — FIXED
+
+`components/canvas/connection-error-toast.tsx`: on the wide tier the toast moves from
+centred at `bottom-5` to `bottom-16 left-5` — the same column as the zoom controls, one
+step above them. Two panels that share a column and differ in row cannot overlap at any
+width, which fixes it for 448px and for 1344px alike rather than only at the width I
+happened to measure. The compact tier is unchanged.
+
+### #9 · z-index scale — FIXED
+
+One scale, defined in one place: the `@theme` block in `app/globals.css`.
+
+| Token | Value | Used by |
+| --- | --- | --- |
+| `z-page` | 10 | landing content above its own decorative backgrounds |
+| `z-canvas-overlay` | 10 | empty state, zoom controls, node status chips |
+| `z-canvas-toast` | 20 | connection-error toast |
+| `z-dock` | 30 | top bar, mobile dock, the top bar's error alert |
+| `z-menu` | 40 | dropdown content anchored to the chrome |
+| `z-overlay` | 50 | dialog, sheet, tooltip |
+
+19 raw `z-10`/`z-20`/`z-30`/`z-40`/`z-50` usages across 12 files were replaced. Verified
+afterwards that **zero** raw numeric z-utilities remain outside the scale's own comment:
+
+```
+$ grep -rnoP '(?<![\w-])z-[0-9]+(?![\w-])' components app
+app/globals.css:97:z-50        # the comment text itself
+```
+
+All six utilities confirmed present in the compiled stylesheet with the right values,
+e.g. `.z-canvas-toast{z-index:20}`. React Flow's own panels sit at `z-index: 5`, so
+`z-canvas-overlay` (10) already clears the minimap and attribution.
+
+### Nodes: width, labels, handles — verified, one small change
+
+- **Width is consistent by construction.** `width: NODE_WIDTH` (240px) is set in exactly
+  one place, `components/nodes/base-node.tsx:65`. Grepped every node and form component:
+  nothing else sets a width.
+- **Labels ellipsise.** The node title already had `truncate`; I added it to the category
+  subtitle too. Config summaries are truncated in `flow-node.tsx`.
+- **Handles are not covered.** They are the last children of the node, so they paint above
+  the accent spine. The status chip (`-bottom-2 -right-2`) and error badge (`-top-2 -right-2`)
+  sit in the corners while handles sit mid-edge, so they cannot meet.
+
+### 1024 / 1280 / 1440 / 1920 — tested as code, not eyeballed
+
+I cannot see pixels in this sandbox, so instead of asserting the arithmetic in prose I put
+it in shipped code and tested it. New module `components/layout/shell-tracks.ts` exports
+`PALETTE_PX`, `INSPECTOR_PX`, `RAIL_PX`, `builderGridColumns()` and `canvasWidthAt()`.
+**`app-shell.tsx` imports `builderGridColumns()` and renders its return value**, so the
+tests assert against the very string that reaches the DOM — not a copy of it.
+
+`components/layout/__tests__/shell-tracks.test.ts` — 13 tests:
+
+| Viewport | Both rails open | Canvas left |
+| --- | --- | --- |
+| 1024 | 256 + 320 | **448px** |
+| 1280 | 256 + 320 | **704px** |
+| 1440 | 256 + 320 | **864px** |
+| 1920 | 256 + 320 | **1344px** |
+
+Plus: a 448px canvas still fits a 240px node with ≥80px to spare; collapsing a rail returns
+exactly `PALETTE_PX − RAIL_PX`; the canvas track clamps to 0 rather than going negative;
+and `minmax(0, 1fr)` is present in every rail combination.
+
+**Negative control:** setting `PALETTE_PX = 300` gives **6 failed | 7 passed**. Restored,
+**13 passed**.
+
+### #8 — retracted, see the issues list above
+
+Multi-select already worked; I had misread the library. No code was changed.
+
+### #10 — resolved as option (a)
+
+You said "continue" without choosing, so I went with the option I recommended: **no 768px
+message, phones keep full editing via bottom sheets.** Nothing was removed. Trivially
+reversible if you want (b) or (c).
+
+### What I could not verify
+
+**No browser is available in this sandbox, so I have not seen any of this rendered.** What
+I *did* check mechanically: the grid template string in served HTML, the absence of the
+clipping wrapper, every z-index utility and the `grid-template-columns` transition in the
+compiled CSS, and the track arithmetic as executed code. The visual result at 1024–1920px
+is inferred from that, not observed.
 
 ## Phase 4 — UX polish (P3)
 

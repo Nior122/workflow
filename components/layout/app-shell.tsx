@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, type ReactNode } from "react";
 import { ReactFlowProvider } from "@xyflow/react";
 import { PanelLeft, PanelRight } from "lucide-react";
 import { TopBar } from "./top-bar";
@@ -16,6 +16,7 @@ import { useViewportTier } from "@/hooks/use-viewport-tier";
 import { useLiveValidation } from "@/hooks/use-live-validation";
 import { usePersistence } from "@/hooks/use-persistence";
 import { useUiStore } from "@/store/uiStore";
+import { builderGridColumns } from "./shell-tracks";
 import { cn } from "@/lib/utils";
 
 /**
@@ -40,6 +41,10 @@ export function AppShell() {
   usePersistence();
   const hydration = useUiStore((state) => state.hydration);
   const showMinimap = useUiStore((state) => state.showMinimap);
+  // Read here rather than in the rails: the grid track widths have to change in
+  // the same commit as the rail contents, or the canvas resizes a frame late.
+  const paletteOpen = useUiStore((state) => state.paletteOpen);
+  const inspectorOpen = useUiStore((state) => state.inspectorOpen);
 
   // Writes graph-level validation issues onto the nodes that caused them.
   useLiveValidation();
@@ -59,10 +64,18 @@ export function AppShell() {
       <TooltipProvider>
         <ReactFlowProvider>
           <CanvasElementProvider>
-            <div className="flex h-dvh flex-col overflow-hidden bg-background">
-              <TopBar />
-              {storageWarning}
-              <main className="relative min-h-0 flex-1">
+            {/* One column, three rows: chrome / canvas / dock. No side panels
+                exist at this tier, so there is nothing for the canvas to sit
+                underneath. */}
+            <div
+              className="grid h-dvh overflow-hidden bg-background"
+              style={{
+                gridTemplateColumns: "minmax(0, 1fr)",
+                gridTemplateRows: "auto minmax(0, 1fr) auto",
+              }}
+            >
+              <ShellHeader storageWarning={storageWarning} />
+              <main className="relative min-w-0 overflow-hidden">
                 <FlowCanvas minimapVisible={false} />
               </main>
               <MobileDock />
@@ -77,25 +90,56 @@ export function AppShell() {
     <TooltipProvider>
       <ReactFlowProvider>
         <CanvasElementProvider>
-          <div className="flex h-dvh flex-col overflow-hidden bg-background">
-            <TopBar />
-            {storageWarning}
+          {/* The whole builder is ONE grid, never nested flex boxes:
 
-            <div className="flex min-h-0 flex-1">
-              <PaletteRail />
+                 row 1   [            chrome             ]
+                 row 2   [ palette ][ canvas ][ inspector ]
+                 row 3   [          run console          ]
 
-              <main className="relative min-w-0 flex-1">
-                <FlowCanvas minimapVisible={showMinimap} />
-              </main>
+              The canvas owns row 2 / column 2 outright, so it is impossible
+              for another panel to be painted over it — the panels are
+              siblings in adjacent tracks, not overlapping layers. Collapsing a
+              rail changes its track width, which the canvas absorbs because its
+              track is minmax(0, 1fr). Animating grid-template-columns makes the
+              collapse a smooth resize rather than a layout jump. */}
+          <div
+            className="grid h-dvh overflow-hidden bg-background transition-[grid-template-columns] duration-200 ease-out"
+            style={{
+              gridTemplateColumns: builderGridColumns({ paletteOpen, inspectorOpen }),
+              gridTemplateRows: "auto minmax(0, 1fr) auto",
+            }}
+          >
+            <ShellHeader storageWarning={storageWarning} />
 
-              <InspectorRail />
-            </div>
+            <PaletteRail />
+
+            <main className="relative min-w-0 overflow-hidden">
+              <FlowCanvas minimapVisible={showMinimap} />
+            </main>
+
+            <InspectorRail />
 
             <BottomPanel />
           </div>
         </CanvasElementProvider>
       </ReactFlowProvider>
     </TooltipProvider>
+  );
+}
+
+/** Top bar plus the optional storage warning, as a single grid row. */
+function ShellHeader({ storageWarning }: { storageWarning: ReactNode }) {
+  return (
+    // `min-w-0` so a long workflow name cannot widen the row and blow out the
+    // grid. Deliberately NOT `overflow-hidden`: the top bar's blocking-error
+    // alert is `absolute top-full`, i.e. it hangs below the bar's own box, so
+    // clipping here would hide the one message that tells you why a run was
+    // refused. Nothing in this row can overflow vertically — the bar is a fixed
+    // height and the warning is a single centred line.
+    <div className="col-span-full flex min-w-0 flex-col">
+      <TopBar />
+      {storageWarning}
+    </div>
   );
 }
 
@@ -113,7 +157,7 @@ function PaletteRail() {
         onClick={() => setPanel("palette", true)}
         aria-label="Show node palette"
         className={cn(
-          "flex w-10 shrink-0 flex-col items-center gap-2 border-r border-border bg-surface py-3",
+          "flex min-w-0 flex-col items-center gap-2 overflow-hidden border-r border-border bg-surface py-3",
           "text-muted-foreground transition-colors hover:text-foreground",
         )}
       >
@@ -129,7 +173,7 @@ function PaletteRail() {
   }
 
   return (
-    <div className="flex h-full w-64 shrink-0 flex-col border-r border-border">
+    <div className="flex min-w-0 flex-col overflow-hidden border-r border-border">
       <Palette onAddAtViewportCenter={handleAddAtCenter} className="min-h-0 flex-1" />
       <RailToggle
         side="left"
@@ -152,7 +196,7 @@ function InspectorRail() {
         onClick={() => setPanel("inspector", true)}
         aria-label="Show node inspector"
         className={cn(
-          "flex w-10 shrink-0 flex-col items-center gap-2 border-l border-border bg-surface py-3",
+          "flex min-w-0 flex-col items-center gap-2 overflow-hidden border-l border-border bg-surface py-3",
           "text-muted-foreground transition-colors hover:text-foreground",
         )}
       >
@@ -168,7 +212,7 @@ function InspectorRail() {
   }
 
   return (
-    <div className="flex h-full w-80 shrink-0 flex-col border-l border-border">
+    <div className="flex min-w-0 flex-col overflow-hidden border-l border-border">
       <Inspector className="min-h-0 flex-1 border-l-0" />
       <RailToggle
         side="right"

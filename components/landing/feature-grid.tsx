@@ -29,7 +29,7 @@ export function FeatureGrid() {
     <section
       id="features"
       aria-labelledby="features-heading"
-      className="relative z-10 scroll-mt-8 border-t border-border px-6 py-16"
+      className="relative z-page scroll-mt-8 border-t border-border px-6 py-16"
     >
       <div className="mx-auto max-w-5xl">
         <h2

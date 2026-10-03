@@ -93,7 +93,7 @@ function BaseNodeInner({
           role="status"
           aria-label={`Node status: ${status}`}
           className={cn(
-            "absolute -bottom-2 -right-2 z-10 grid size-5 place-items-center rounded-full",
+            "absolute -bottom-2 -right-2 z-canvas-overlay grid size-5 place-items-center rounded-full",
             "border bg-surface-raised shadow",
             status === "running" && "border-accent text-accent",
             status === "success" && "border-success text-success",
@@ -121,7 +121,7 @@ function BaseNodeInner({
             <span
               role="status"
               aria-label={`${errors.length} configuration ${errors.length === 1 ? "error" : "errors"}`}
-              className="absolute -top-2 -right-2 z-10 grid size-5 cursor-help place-items-center rounded-full border border-error bg-surface-raised text-error shadow"
+              className="absolute -top-2 -right-2 z-canvas-overlay grid size-5 cursor-help place-items-center rounded-full border border-error bg-surface-raised text-error shadow"
             >
               <AlertTriangle className="size-3" aria-hidden />
             </span>
@@ -159,7 +159,7 @@ function BaseNodeInner({
           <h3 className="truncate text-[13px] leading-tight font-semibold text-foreground">
             {label}
           </h3>
-          <p className="mt-0.5 text-[11px] leading-tight text-muted-foreground">
+          <p className="mt-0.5 truncate text-[11px] leading-tight text-muted-foreground">
             {CATEGORY_LABEL[category]}
           </p>
         </div>

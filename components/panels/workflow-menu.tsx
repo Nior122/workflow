@@ -178,7 +178,7 @@ export function WorkflowMenu({ onOpenTemplates }: { onOpenTemplates: () => void 
           <DropdownMenu.Content
             align="end"
             sideOffset={6}
-            className="z-50 w-56 rounded-lg border border-border bg-surface p-1.5 shadow-xl"
+            className="z-overlay w-56 rounded-lg border border-border bg-surface p-1.5 shadow-xl"
           >
             <DropdownMenu.Item className={itemClass} onSelect={() => createNewWorkflow()}>
               <FilePlus2 className="size-3.5 text-muted-foreground" aria-hidden />
@@ -315,7 +315,7 @@ export function WorkflowMenu({ onOpenTemplates }: { onOpenTemplates: () => void 
         <div
           role="status"
           className={cn(
-            "absolute top-full right-0 z-40 mt-2 flex w-64 items-start gap-2 rounded-lg border px-3 py-2 shadow-lg",
+            "absolute top-full right-0 z-menu mt-2 flex w-64 items-start gap-2 rounded-lg border px-3 py-2 shadow-lg",
             toast.tone === "ok"
               ? "border-success/40 bg-surface-raised"
               : "border-error/40 bg-surface-raised",

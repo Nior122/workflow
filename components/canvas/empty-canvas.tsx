@@ -19,7 +19,7 @@ export function EmptyCanvas() {
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, ease: "easeOut" }}
-      className="pointer-events-none absolute inset-0 z-10 grid place-items-center px-4"
+      className="pointer-events-none absolute inset-0 z-canvas-overlay grid place-items-center px-4"
     >
       <div className="w-full max-w-sm rounded-xl border border-dashed border-border bg-surface/80 px-5 py-6 text-center backdrop-blur-sm sm:px-8 sm:py-7">
         <span className="mx-auto grid size-11 place-items-center rounded-lg border border-accent/30 bg-accent/10 text-accent">
