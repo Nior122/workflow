@@ -43,5 +43,8 @@
     "typescript": "5.9.3",
     "vitest": "5.0.3"
   },
-  "description": "FlowForge — a visual workflow builder with a simulated execution engine"
+  "engines": {
+    "node": "22.x"
+  },
+  "description": "FlowForge \u2014 a visual workflow builder with a simulated execution engine"
 }
