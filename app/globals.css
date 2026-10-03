@@ -1,0 +1,260 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "@xyflow/react/dist/style.css";
+
+/* ------------------------------------------------------------------ *
+ * FlowForge design tokens
+ * Values are HSL triplets so `hsl(var(--x) / <alpha>)` works for glows.
+ * Light-theme accent is darkened (#E2521B) to hold AA contrast on white.
+ * ------------------------------------------------------------------ */
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --background: 60 9% 98%; /* #FAFAF9 */
+  --surface: 0 0% 100%; /* #FFFFFF */
+  --surface-raised: 0 0% 100%; /* #FFFFFF */
+  --border: 40 10% 88%; /* #E4E2DE */
+  --foreground: 255 8% 9%; /* #17161A */
+  --muted-foreground: 248 4% 43%; /* #6B6A72 */
+
+  --accent: 17 79% 50%; /* #E2521B */
+  --accent-hot: 32 88% 48%; /* #E8820F */
+  --accent-contrast: 40 16% 96%;
+
+  --success: 148 68% 37%; /* #1E9E5A */
+  --error: 357 68% 53%; /* #D9363E */
+  --warning: 43 89% 38%; /* #B8860B */
+  --skipped: 248 4% 65%; /* #A3A2AA */
+
+  --ring: 17 79% 50%;
+  --grid-dot: 43 8% 84%; /* #D9D7D2 */
+
+  --radius: 12px;
+  --glow-strength: 0.28;
+}
+
+.dark {
+  --background: 240 10% 6%; /* #0E0E11 */
+  --surface: 240 9% 9%; /* #151519 */
+  --surface-raised: 240 8% 12%; /* #1C1C21 */
+  --border: 240 8% 18%; /* #2A2A31 */
+  --foreground: 40 16% 96%; /* #F7F6F4 */
+  --muted-foreground: 240 5% 63%; /* #9C9CA6 */
+
+  --accent: 16 100% 60%; /* #FF6B35 */
+  --accent-hot: 32 100% 61%; /* #FFA23A */
+  --accent-contrast: 240 10% 6%;
+
+  --success: 147 61% 47%; /* #2FBF71 */
+  --error: 358 86% 64%; /* #F2555A */
+  --warning: 44 99% 48%; /* #F5B301 */
+  --skipped: 240 5% 45%; /* #6E6E7A */
+
+  --ring: 16 100% 60%;
+  --grid-dot: 240 8% 18%; /* #2A2A31 */
+
+  --glow-strength: 0.45;
+}
+
+@theme inline {
+  --color-background: hsl(var(--background));
+  --color-surface: hsl(var(--surface));
+  --color-surface-raised: hsl(var(--surface-raised));
+  --color-border: hsl(var(--border));
+  --color-foreground: hsl(var(--foreground));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+
+  --color-accent: hsl(var(--accent));
+  --color-accent-hot: hsl(var(--accent-hot));
+  --color-accent-contrast: hsl(var(--accent-contrast));
+
+  --color-success: hsl(var(--success));
+  --color-error: hsl(var(--error));
+  --color-warning: hsl(var(--warning));
+  --color-skipped: hsl(var(--skipped));
+
+  --color-ring: hsl(var(--ring));
+
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, monospace;
+
+  --radius-sm: calc(var(--radius) - 6px);
+  --radius-md: calc(var(--radius) - 3px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+@layer base {
+  * {
+    border-color: hsl(var(--border));
+  }
+
+  html {
+    color-scheme: light;
+  }
+
+  html.dark {
+    color-scheme: dark;
+  }
+
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Visible, consistent focus ring everywhere — an explicit a11y requirement. */
+  :focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+  }
+
+  /* Mono for JSON and logs. */
+  code,
+  kbd,
+  pre,
+  samp {
+    font-family: var(--font-mono);
+  }
+}
+
+@layer utilities {
+  /* Soft ember glow used on active nodes, the Run button, and focused cards. */
+  .glow-accent {
+    box-shadow: 0 0 0 1px hsl(var(--accent) / 0.35),
+      0 0 calc(18px * var(--glow-strength)) hsl(var(--accent) / var(--glow-strength)),
+      0 0 calc(42px * var(--glow-strength)) hsl(var(--accent-hot) / calc(var(--glow-strength) * 0.55));
+  }
+
+  .glow-success {
+    box-shadow: 0 0 0 1px hsl(var(--success) / 0.4),
+      0 0 calc(20px * var(--glow-strength)) hsl(var(--success) / calc(var(--glow-strength) * 0.8));
+  }
+
+  .glow-error {
+    box-shadow: 0 0 0 1px hsl(var(--error) / 0.45),
+      0 0 calc(20px * var(--glow-strength)) hsl(var(--error) / calc(var(--glow-strength) * 0.8));
+  }
+
+  .text-gradient-ember {
+    background-image: linear-gradient(
+      100deg,
+      hsl(var(--accent)) 0%,
+      hsl(var(--accent-hot)) 100%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .bg-gradient-ember {
+    background-image: linear-gradient(
+      100deg,
+      hsl(var(--accent)) 0%,
+      hsl(var(--accent-hot)) 100%
+    );
+  }
+}
+
+/* ---- React Flow overrides so the canvas matches the theme ---- */
+
+/* React Flow's attribution is kept (their free-tier terms require it) but made
+   unobtrusive so it does not fight the design. */
+.react-flow__attribution {
+  background: transparent;
+  color: hsl(var(--muted-foreground) / 0.65);
+  font-size: 10px;
+  padding: 2px 6px;
+}
+
+.react-flow__attribution a {
+  color: hsl(var(--muted-foreground) / 0.85);
+  text-decoration: none;
+}
+
+.react-flow__attribution a:hover {
+  color: hsl(var(--accent));
+}
+
+.react-flow__handle {
+  width: 11px;
+  height: 11px;
+  border-radius: 9999px;
+  background: hsl(var(--surface-raised));
+  border: 2px solid hsl(var(--border));
+  transition:
+    transform 140ms ease,
+    border-color 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.react-flow__handle:hover,
+.react-flow__handle.connectionindicator:hover {
+  border-color: hsl(var(--accent));
+  transform: scale(1.25);
+  box-shadow: 0 0 10px hsl(var(--accent) / 0.7);
+}
+
+.react-flow__handle.connectingfrom {
+  border-color: hsl(var(--accent-hot));
+  box-shadow: 0 0 12px hsl(var(--accent-hot) / 0.8);
+}
+
+.react-flow__handle.valid {
+  border-color: hsl(var(--success));
+  box-shadow: 0 0 12px hsl(var(--success) / 0.7);
+}
+
+.react-flow__connection-path {
+  stroke: hsl(var(--accent-hot));
+  stroke-width: 2;
+  stroke-dasharray: 5 4;
+  animation: ff-dash 0.6s linear infinite;
+}
+
+@keyframes ff-dash {
+  to {
+    stroke-dashoffset: -9;
+  }
+}
+
+.react-flow__edge-path {
+  stroke: hsl(var(--border));
+  stroke-width: 2;
+  transition: stroke 160ms ease;
+}
+
+.react-flow__edge.selected .react-flow__edge-path,
+.react-flow__edge:hover .react-flow__edge-path {
+  stroke: hsl(var(--accent));
+}
+
+.react-flow__node.selected .ff-node {
+  border-color: hsl(var(--accent));
+}
+
+.react-flow__minimap {
+  background-color: hsl(var(--surface)) !important;
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.react-flow__controls-button {
+  background: hsl(var(--surface-raised));
+  border-bottom: 1px solid hsl(var(--border));
+  color: hsl(var(--foreground));
+  fill: currentColor;
+}
+
+.react-flow__controls-button:hover {
+  background: hsl(var(--border));
+}
+
+.react-flow__controls-button svg {
+  fill: currentColor;
+}
