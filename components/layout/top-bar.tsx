@@ -3,15 +3,18 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
-import { AlertCircle, Flame, Play, Square, Trash2 } from "lucide-react";
+import { AlertCircle, Flame, LayoutTemplate, Play, Square, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ThemeToggle } from "./theme-toggle";
 import { SpeedControl } from "@/components/panels/speed-control";
+import { WorkflowMenu } from "@/components/panels/workflow-menu";
+import { TemplateGallery } from "@/components/panels/template-gallery";
+import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { useRunWorkflow } from "@/hooks/use-run-workflow";
 import { useRunStore } from "@/store/runStore";
 import { useWorkflowStore } from "@/store/workflowStore";
-import { useIsRunning } from "@/store/uiStore";
+import { useIsRunning, useUiStore } from "@/store/uiStore";
 import { cn } from "@/lib/utils";
 
 /**
@@ -29,6 +32,9 @@ export function TopBar() {
 
   const { run, cancel } = useRunWorkflow();
   const [editingName, setEditingName] = useState(false);
+  const [templatesOpen, setTemplatesOpen] = useState(false);
+
+  useKeyboardShortcuts();
 
   // A blocking message is a reaction to a failed attempt, so it should not linger.
   useEffect(() => {
@@ -82,7 +88,14 @@ export function TopBar() {
         {nodeCount} node{nodeCount === 1 ? "" : "s"}
       </span>
 
+      <WorkflowSwitcher />
+
       <div className="ml-auto flex items-center gap-2">
+        <Button variant="secondary" size="sm" onClick={() => setTemplatesOpen(true)}>
+          <LayoutTemplate aria-hidden />
+          Templates
+        </Button>
+
         <SpeedControl />
 
         <span aria-hidden className="h-5 w-px bg-border" />
@@ -140,8 +153,12 @@ export function TopBar() {
           </Button>
         )}
 
+        <WorkflowMenu onOpenTemplates={() => setTemplatesOpen(true)} />
+
         <ThemeToggle />
       </div>
+
+      <TemplateGallery open={templatesOpen} onOpenChange={setTemplatesOpen} />
 
       <AnimatePresence>
         {blockingMessage && (
@@ -169,5 +186,38 @@ export function TopBar() {
         )}
       </AnimatePresence>
     </header>
+  );
+}
+
+
+/** Compact switcher for saved workflows. */
+function WorkflowSwitcher() {
+  const workflows = useWorkflowStore((state) => state.workflows);
+  const activeWorkflowId = useWorkflowStore((state) => state.activeWorkflowId);
+  const switchWorkflow = useWorkflowStore((state) => state.switchWorkflow);
+  const isRunning = useUiStore((state) => state.isRunning);
+
+  if (workflows.length <= 1) return null;
+
+  return (
+    <>
+      <span aria-hidden className="h-5 w-px bg-border" />
+      <label className="sr-only" htmlFor="workflow-switcher">
+        Switch workflow
+      </label>
+      <select
+        id="workflow-switcher"
+        value={activeWorkflowId}
+        disabled={isRunning}
+        onChange={(event) => switchWorkflow(event.target.value)}
+        className="max-w-44 cursor-pointer truncate rounded-md border border-border bg-surface-raised px-2 py-1 text-xs text-foreground focus:border-accent focus:outline-none disabled:opacity-50"
+      >
+        {workflows.map((workflow) => (
+          <option key={workflow.id} value={workflow.id}>
+            {workflow.name}
+          </option>
+        ))}
+      </select>
+    </>
   );
 }

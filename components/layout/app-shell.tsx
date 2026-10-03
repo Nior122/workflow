@@ -13,6 +13,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAddNodeAtCenter } from "@/hooks/use-canvas-actions";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { useLiveValidation } from "@/hooks/use-live-validation";
+import { usePersistence } from "@/hooks/use-persistence";
 import { MOBILE_BREAKPOINT_PX } from "@/config/constants";
 import { useUiStore } from "@/store/uiStore";
 
@@ -28,6 +29,10 @@ export function AppShell() {
   const isNarrow = useMediaQuery(`(max-width: ${MOBILE_BREAKPOINT_PX - 1}px)`);
   const showMinimap = useUiStore((state) => state.showMinimap);
 
+  // Hydrates from localStorage or a share link, then auto-saves on change.
+  usePersistence();
+  const hydration = useUiStore((state) => state.hydration);
+
   // Writes graph-level validation issues onto the nodes that caused them.
   useLiveValidation();
 
@@ -39,6 +44,16 @@ export function AppShell() {
             <TopBar />
 
             {isNarrow && <MobileNotice />}
+
+            {hydration === "unavailable" && (
+              <p
+                role="status"
+                className="border-b border-warning/30 bg-warning/10 px-4 py-2 text-center text-xs text-warning"
+              >
+                Browser storage is unavailable, so this session will not be saved. Export your
+                workflow to keep it.
+              </p>
+            )}
 
             <div className="flex min-h-0 flex-1">
               {!isNarrow && <PaletteWrapper />}

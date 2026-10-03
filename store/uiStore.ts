@@ -4,6 +4,8 @@ import { DEFAULT_SPEED } from "@/config/constants";
 
 export type PanelId = "palette" | "inspector" | "console";
 
+export type HydrationState = "loading" | "ready" | "unavailable";
+
 type UiState = {
   paletteOpen: boolean;
   inspectorOpen: boolean;
@@ -12,12 +14,15 @@ type UiState = {
   speed: ExecutionSpeed;
   /** True while a run is in flight; the Run button and palette lock during it. */
   isRunning: boolean;
+  /** Progress of the localStorage / share-link hydration pass. */
+  hydration: HydrationState;
 
   togglePanel: (panel: PanelId) => void;
   setPanel: (panel: PanelId, open: boolean) => void;
   setShowMinimap: (show: boolean) => void;
   setSpeed: (speed: ExecutionSpeed) => void;
   setIsRunning: (running: boolean) => void;
+  setHydration: (hydration: HydrationState) => void;
 };
 
 /**
@@ -31,6 +36,7 @@ export const useUiStore = create<UiState>((set) => ({
   showMinimap: true,
   speed: DEFAULT_SPEED,
   isRunning: false,
+  hydration: "loading",
 
   togglePanel: (panel) =>
     set((state) => {
@@ -59,6 +65,7 @@ export const useUiStore = create<UiState>((set) => ({
   setShowMinimap: (showMinimap) => set({ showMinimap }),
   setSpeed: (speed) => set({ speed }),
   setIsRunning: (isRunning) => set({ isRunning }),
+  setHydration: (hydration) => set({ hydration }),
 }));
 
 export function useIsRunning(): boolean {

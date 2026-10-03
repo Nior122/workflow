@@ -62,6 +62,9 @@ export function useRunWorkflow() {
       });
 
       useRunStore.getState().completeRun(result);
+      // Keep the durable history alongside the ephemeral run state so a save
+      // captures it too.
+      useWorkflowStore.getState().pushRun(result);
     } finally {
       abortRef.current = null;
       useUiStore.getState().setIsRunning(false);

@@ -80,64 +80,83 @@ Revisit at Phase 7 (deploy prep) once `@typescript-eslint` widens its peer range
 
 ## 3. Folder structure
 
+Reflects the repository as it actually stands after Phase 5, not the original plan.
+Deviations from the Phase 0 sketch are listed after the tree.
+
 ```
 workflow/
 ├── app/
 │   ├── layout.tsx                 # RootLayout: fonts, ThemeProvider, metadata
 │   ├── page.tsx                   # "/" landing page
-│   ├── not-found.tsx
-│   ├── globals.css                # Tailwind v4 @theme tokens, accent, glow utilities
-│   └── builder/
-│       └── page.tsx               # "/builder" the full app
+│   ├── globals.css                # Tailwind v4 @theme tokens, accent, glow, ff-shake
+│   └── builder/page.tsx           # "/builder" the full app
 ├── components/
-│   ├── canvas/                    # FlowCanvas, CanvasBackground, ZoomControls, FlowMiniMap,
-│   │                              #   DropTarget, SelectionLayer
-│   ├── edges/                     # AnimatedFlowEdge (travelling particles), edge types map
-│   ├── nodes/                     # BaseNode shell + one component per node type
-│   │   ├── BaseNode.tsx           #   shared chrome: header, icon, ports, status badge
-│   │   ├── registry.tsx           #   UI-side registry: icon, accent, config form component
-│   │   └── forms/                 #   one config form per node type
-│   ├── panels/                    # Palette, Inspector, RunConsole, RunHistory,
-│   │   │                          #   TemplateGallery, TopBar, ValidationBanner
-│   ├── layout/                    # AppShell, PanelResizer, ThemeToggle, MobileNotice
-│   ├── landing/                   # Hero, DemoLoop, FeatureGrid
-│   └── ui/                        # shadcn primitives (dialog, tooltip, tabs, select, switch…)
+│   ├── canvas/                    # flow-canvas, canvas-context (dnd bridge),
+│   │                              #   zoom-controls (+auto-layout), empty-canvas
+│   ├── edges/                     # animated-flow-edge (travelling particles)
+│   ├── nodes/
+│   │   ├── base-node.tsx          #   shared chrome: header, icon, ports, status badge
+│   │   ├── flow-node.tsx          #   createNodeComponent(type) -> one component per type
+│   │   ├── registry.tsx           #   UI-side registry: icon, accent, ACCENTS palette
+│   │   └── forms/                 #   trigger-forms, action-forms, output-forms, fields
+│   ├── panels/                    # palette, inspector, run-console, run-history,
+│   │                              #   bottom-panel, speed-control, template-gallery,
+│   │                              #   workflow-menu
+│   ├── layout/                    # app-shell, top-bar, theme-provider, theme-toggle,
+│   │                              #   mobile-notice
+│   └── ui/                        # hand-written shadcn: button, tooltip, dialog
 ├── lib/
 │   ├── engine/                    # PURE TS — no React, no DOM, no 'use client'
-│   │   ├── index.ts               #   public surface
 │   │   ├── types.ts               #   engine-owned types (payloads, events, step logs)
-│   │   ├── registry.ts            #   node-type metadata: ports, defaults, latency, executor
+│   │   ├── registry.ts            #   node-type metadata: ports, defaults, latency, execute
 │   │   ├── graph.ts               #   cycle detection, topological waves, reachability
 │   │   ├── validator.ts           #   pre-run validation -> ValidationIssue[]
 │   │   ├── variables.ts           #   {{dot.path}} resolution + template rendering
 │   │   ├── executor.ts            #   wave scheduler, status transitions, event emitter
 │   │   ├── simulator.ts           #   canned AI / HTTP / email / slack / sheets responses
-│   │   ├── executors/             #   one file per node type
-│   │   └── __tests__/             #   graph, validator, variables, executor, executors
-│   ├── layout.ts                  # auto-layout (layered, left-to-right)
-│   ├── templates/                 # the 4 built-in flows + registry
-│   └── utils/                     # cn, id, json, clipboard, share (lz encode/decode), storage
+│   │   ├── node-defs/             #   triggers.ts, actions.ts, outputs.ts
+│   │   └── __tests__/             #   helpers, graph, validator, variables, executor, registry
+│   ├── layout.ts                  # auto-layout (columns from analyzeGraph waves)
+│   ├── graph-builder.ts           # buildNode / buildEdge / cloneGraph — deterministic ids
+│   ├── templates/                 # the 4 built-in flows (factories, not constants)
+│   ├── utils.ts                   # cn()
+│   ├── utils/                     # share.ts (lz encode/decode), storage.ts (localStorage)
+│   └── __tests__/                 # layout, templates
 ├── store/
-│   ├── workflowStore.ts           # nodes, edges, viewport, CRUD, persistence, undo/redo
+│   ├── workflowStore.ts           # nodes, edges, viewport, CRUD, undo/redo, multi-workflow
 │   ├── runStore.ts                # run status, per-node status, step logs, history (last 10)
-│   └── uiStore.ts                 # theme, panel visibility, speed, selection
+│   ├── uiStore.ts                 # panels, speed, isRunning, hydration status
+│   └── __tests__/
 ├── hooks/
-│   ├── useKeyboardShortcuts.ts    # delete, duplicate, undo/redo, run
-│   ├── useDragAndDrop.ts          # palette -> canvas
-│   ├── useMediaQuery.ts
-│   └── useAutoSave.ts
-├── types/
-│   ├── json.ts                    # JsonValue / JsonObject
-│   ├── nodes.ts                   # node types, configs (discriminated union)
-│   ├── edges.ts
-│   ├── workflow.ts
-│   ├── run.ts
-│   └── validation.ts
-├── config/
-│   ├── constants.ts               # latency bounds, history cap, storage keys, speed options
-│   └── theme.ts                   # accent + neutral scale, per-node accent colors
+│   ├── use-keyboard-shortcuts.ts  # undo, redo, duplicate, run
+│   ├── use-run-workflow.ts        # run/cancel + pushRun into history
+│   ├── use-live-validation.ts     # debounced graph validation -> data.validation
+│   ├── use-persistence.ts         # hydrate + auto-save + share-link adoption
+│   ├── use-canvas-actions.ts      # add-at-centre
+│   └── use-media-query.ts         # useSyncExternalStore over matchMedia
+├── types/                         # json, nodes, edges, workflow, run, validation, index
+├── config/                        # constants.ts, theme.ts
 └── PROJECT_NOTES.md
 ```
+
+**Deviations from the Phase 0 sketch** (permitted: "adjust if you have a good reason")
+
+1. **No `lib/engine/executors/` directory.** `execute` lives on `NodeTypeDef` in
+   `node-defs/*.ts`, so a node's shape and its behaviour stay in one file and the executor
+   only ever needs the registry.
+2. **No `lib/engine/index.ts` barrel.** Direct imports make the pure boundary greppable —
+   `grep -rn "from "react"" lib/engine` returning nothing is the test that the rule holds.
+3. **No `app/not-found.tsx`.** Next's built-in 404 is sufficient for a two-page app.
+4. **`useAutoSave` + share-link adoption merged into `use-persistence.ts`.** They are one
+   lifecycle: read once on mount, write on change. Splitting them would race.
+5. **No `useDragAndDrop` hook.** The palette-to-canvas bridge lives in
+   `components/canvas/canvas-context.tsx`, because it needs the React Flow instance, which
+   is only available below `<ReactFlowProvider>`.
+6. **`PanelResizer` is inside `bottom-panel.tsx`**, not a shared component — it is the only
+   resizable surface.
+7. **kebab-case filenames throughout** (`base-node.tsx`, not `BaseNode.tsx`), matching the
+   Next.js App Router convention the scaffold uses.
+8. **`components/landing/` does not exist yet** — it is Phase 6.
 
 **Rule enforced throughout:** nothing under `lib/engine/` may import React, `@xyflow/react`, or
 Zustand. The engine receives plain data and returns plain data plus an event stream. This is what
@@ -484,11 +503,11 @@ export interface NodeUiDef {
 
 - [x] **Phase 1** — Project setup, this notes file, layout shell, theme, canvas with
       pan/zoom/grid/minimap/zoom controls, palette, 3 basic node types draggable & connectable.
-- [ ] **Phase 2** — All 13 node types with config forms, inspector panel, validation errors on nodes.
-- [ ] **Phase 3** — Execution engine + unit tests, node statuses, run console with JSON inspection.
-- [ ] **Phase 4** — Animated edges (travelling particles), node state animations, speed control,
+- [x] **Phase 2** — All 13 node types with config forms, inspector panel, validation errors on nodes.
+- [x] **Phase 3** — Execution engine + unit tests, node statuses, run console with JSON inspection.
+- [x] **Phase 4** — Animated edges (travelling particles), node state animations, speed control,
       failure simulation.
-- [ ] **Phase 5** — Templates (4 flows), save/load named workflows, import/export JSON, share link,
+- [x] **Phase 5** — Templates (4 flows), save/load named workflows, import/export JSON, share link,
       undo/redo, auto-layout.
 - [ ] **Phase 6** — Landing page with looping animated demo, polish pass, accessibility pass,
       responsive fallback.
@@ -652,3 +671,171 @@ Removed: the five unused `public/*.svg` boilerplate files and the empty `public/
   by diffing rendered `href="#..."` values against rendered `id="..."` values.
 - No browser-level test of drag-and-drop or handle-to-handle connection. The logic underneath
   both is unit-tested, but the pointer interaction itself is unverified in this sandbox.
+
+### Phase 2 — All 13 node types, config forms, inspector, validation (COMPLETE)
+
+**Files created:** `lib/engine/node-defs/{triggers,actions,outputs}.ts`,
+`components/nodes/flow-node.tsx`, `components/nodes/forms/*` (one form per node type),
+`components/panels/inspector.tsx`, `components/ui/switch.tsx`.
+
+**Files changed:** `lib/engine/registry.ts` (now pure composition of the three node-def
+modules), `components/nodes/base-node.tsx` (validation badges), `components/nodes/index.ts`,
+`app/globals.css`.
+
+**Decisions**
+
+1. **Node defs split into `node-defs/{triggers,actions,outputs}.ts`** with `registry.ts`
+   composing them. One file per group keeps each under ~250 lines; the registry stays the
+   single import site for the rest of the app.
+2. **One generic node component** via `createNodeComponent(type)` rather than 13 files.
+   `nodeTypes` passed to `<ReactFlow>` must be referentially stable or the canvas remounts
+   every render, so a factory over a static record is the only safe shape.
+3. **Two validation surfaces, deliberately separate.** Config problems (missing field,
+   malformed JSON, unbalanced `{{token}}`) are computed *inside* the node component from its
+   own config, so they update on every keystroke with no round trip. Graph problems (cycle,
+   no trigger, unreachable) are computed once by `useLiveValidation` and written to
+   `data.validation`. Mixing the two would re-render the whole graph on every keystroke.
+4. **Native `<select>` with an inlined chevron**, not a Radix select. Fewer moving parts,
+   and native selects are already keyboard- and screen-reader-correct.
+5. **`{{token}}`-aware validators** with a shared `checkUnbalancedTokens` helper, so every
+   template field reports `{{name` without a closing brace rather than failing silently.
+6. **The condition node is distinguished by two labelled `true`/`false` handles**, not by
+   colour. Colour alone would be invisible to colour-blind users.
+
+**Known issues / deferred:** execution was still absent — Run stayed disabled until Phase 3.
+
+### Phase 3 — Execution engine, tests, run console (COMPLETE)
+
+**Files created:** `lib/engine/{variables,graph,types,simulator,validator,executor}.ts`,
+`lib/engine/__tests__/{helpers,variables.test,graph.test,validator.test,executor.test}.ts`,
+`store/runStore.ts`, `hooks/{use-run-workflow,use-live-validation}.ts`,
+`components/panels/{run-console,run-history,bottom-panel,speed-control}.tsx`.
+
+**Verification at end of phase:** tsc 0 · lint 0/0 · **126 tests passing** · build 3.0 s ·
+`GET /builder 200` with all 13 node types and every panel in the served HTML.
+
+**Decisions**
+
+1. **`execute` lives on `NodeTypeDef`**, not in a parallel `executors/` directory. Keeps a
+   node's shape and its behaviour in one place and makes the registry the only thing the
+   executor needs to know about.
+2. **Wave scheduling** via Kahn's algorithm in `analyzeGraph`; waves are sorted so runs are
+   reproducible. A node runs once every incoming edge has settled; it skips when all settled
+   without data (the merge semantics the client approved).
+3. **Injectable `sleep`/`now`/`random` on `StepContext`** with a fake clock, so a full run —
+   latency included — completes synchronously under test. This is why the executor needs no
+   fake timers. (`sleep` must exist on both `StepContext` and `EngineEffects`; they were
+   declared separately and drifted once.)
+4. **Variable precedence:** bare dot-notation → `$payload.` → `$node.<id>.` → `$run.`.
+   Unresolved tokens render empty *and* are collected, so a typo is visible rather than
+   silently blank. `"".split(".")` returns `[""]`, so every path walker special-cases empty.
+5. **Numeric operators coerce via `Number()` and NaN is `false`**, not `true` — a filter on a
+   missing field must not pass by accident.
+6. **Validation gates the run.** A cyclic flow fails with **zero** `node:running` events,
+   which the tests assert explicitly.
+7. **An errored node delivers nothing downstream**, so successors skip rather than receive a
+   partial payload.
+8. **`useLiveValidation` is debounced 220 ms**, paused while running, and only patches nodes
+   whose issues actually changed.
+
+### Phase 4 — Animated edges, node states, speed control (COMPLETE)
+
+**Files created:** `components/edges/animated-flow-edge.tsx` (rewritten),
+`@keyframes ff-shake` in `app/globals.css`.
+
+**Decisions**
+
+1. **Particles use an inline `path` on `<animateMotion>`** rather than `<mpath>` referencing
+   an id. Browser-composited with no per-frame JavaScript, and it avoids id collisions when
+   the same edge renders twice (e.g. minimap). Three particles at 0 / 0.33 / 0.66 of the
+   travel duration.
+2. **Node states:** pulse ring + spinner (running), green check badge (success),
+   `ff-shake` + error glow (error), `opacity-45` (skipped). The shake keyframes are wrapped in
+   `prefers-reduced-motion: no-preference`.
+3. **`BottomPanel` is drag-resizable 140–560 px** and collapses to a 40 px strip, with
+   arrow-key resizing for keyboard users.
+
+### Phase 5 — Templates, persistence, share links, undo/redo, auto-layout (COMPLETE)
+
+**Verification (all run, all green):**
+
+| Check | Command | Result |
+| --- | --- | --- |
+| Types | `npx tsc --noEmit` | exit 0 |
+| Lint | `npm run lint` | exit 0, 0 problems |
+| Unit tests | `npm test` | **184 passed** (10 files) — up from 126 |
+| Build | `npm run build` | ✓ Compiled successfully in 4.1 s; `/`, `/_not-found`, `/builder` static |
+| Runtime | `next dev` on `0.0.0.0:3000` | `GET / 200`, `GET /builder 200` |
+| Served HTML | grepped `/builder` | all 13 node types + `Templates`, `Workflow actions`, `Auto-layout`, `Node inspector`, `Run console`, `Execution speed` present |
+| Bundle | grepped `.next/static/chunks` | all 4 template names + `Start from a template` present (they are portal-rendered, so absent from SSR HTML by design) |
+
+**Files created:** `lib/layout.ts`, `lib/graph-builder.ts`, `lib/templates/index.ts`,
+`lib/utils/{share,storage}.ts`, `lib/utils/__tests__/share.test.ts`,
+`lib/__tests__/{layout,templates}.test.ts`, `store/__tests__/workflow-store-history.test.ts`,
+`components/panels/{template-gallery,workflow-menu}.tsx`, `components/ui/dialog.tsx`,
+`hooks/{use-keyboard-shortcuts,use-persistence}.ts`.
+
+**Files changed:** `store/workflowStore.ts` (rewritten), `store/uiStore.ts` (+`hydration`),
+`components/layout/{top-bar,app-shell}.tsx`, `components/canvas/zoom-controls.tsx`,
+`hooks/use-run-workflow.ts`, `lib/engine/__tests__/helpers.ts`, `vitest.config.mts`,
+`package.json` (+`lz-string@1.5.0`, `@radix-ui/react-dialog@1.1.15`,
+`@radix-ui/react-dropdown-menu@2.1.16`).
+
+**Decisions**
+
+1. **`autoLayout` takes its columns straight from `analyzeGraph` waves**, so the visual order
+   *is* the execution order. Rows are barycentre-ordered to reduce crossings.
+   `COLUMN_GAP 120` / `ROW_GAP 40` / node height estimate 116.
+2. **Nodes in no wave keep their position**, so auto-layout on a cyclic graph never destroys
+   the user's arrangement. Asserted in `layout.test.ts`.
+3. **`autoLayout` returns nodes only** — edges follow their endpoints, so returning edges
+   would be a lie about what the function does. Callers keep their own edge array.
+4. **`buildNode`/`buildEdge` in `lib/graph-builder.ts`** give templates deterministic ids
+   (`e-<src>-<handle>-<tgt>`), so re-loading a template is idempotent. The engine test
+   helpers now alias these instead of duplicating the construction logic.
+5. **Templates are factories, not constants**, so instantiating twice yields independent
+   nodes. Asserted. Templates are laid out on load rather than shipped with hardcoded
+   coordinates — one fewer thing to keep in sync when the node chrome changes size.
+6. **Share links use `lz-string`'s `compressToEncodedURIComponent`** behind the prefix
+   `#flow=`, with a 2000-char soft-limit warning. `decodeShareHash` returns a discriminated
+   `{ok}` result and never throws; it rejects `schemaVersion > WORKFLOW_SCHEMA_VERSION`.
+   Measured ratio on a realistic workflow: **2983 → 1479 chars (~2×)**, still well under the
+   soft limit.
+7. **Undo/redo snapshots exclude the viewport** (panning must not be an undoable edit) and
+   are capped at `HISTORY_LIMIT = 60`. Drags coalesce via a module-scope `dragging` flag that
+   snapshots on the *first* position change with `dragging === true`, so a whole drag is one
+   undo step rather than one per frame.
+8. **Hydration status lives in `uiStore`, not React state.** ESLint's
+   `react-hooks/set-state-in-effect` rejected the `useState` version — correctly, for the
+   same reason it rejected `useMediaQuery` in Phase 1. A Zustand store *is* an external
+   system, so writing to it from an effect is the intended pattern.
+9. **A share link wins over saved state but does not overwrite it** — opening someone's link
+   is explicit intent, and silently replacing the user's own work would be worse.
+10. **Auto-layout lives in the canvas zoom controls, not only the workflow menu**, because
+    §1 lists it as a canvas affordance.
+11. **Import accepts either a full exported workflow or a bare `{nodes, edges}` graph**,
+    because people hand-edit these files.
+
+**Bugs found by the new tests and fixed**
+
+1. **The store opened in an inconsistent state.** Initial `workflows: []` alongside
+   `activeWorkflowId: "default"` — the active id pointed at nothing until hydration ran.
+   Now the store starts with the same single workflow `lib/utils/storage` persists, via a
+   shared `DEFAULT_WORKFLOW_ID` constant.
+2. **`createNewWorkflow` silently discarded the canvas.** It blanked `nodes`/`edges` without
+   folding the live graph into the workflow being left, so everything drawn since the last
+   switch was lost. `switchWorkflow` already folded; the fold is now extracted into a shared
+   `foldActiveInto` helper used by `createNewWorkflow`, `switchWorkflow` and
+   `snapshotWorkflows`. This was a genuine data-loss bug, not a test-expectation error.
+3. **`buildShareUrl` hardcoded `window.location`**, which threw under `environment: "node"`
+   and made the function untestable. `base` is now injectable (defaulting to the current
+   page), and `shareUrlLength` accounts for the same prefix so the two agree.
+
+**Known issues / deferred**
+
+- No browser-level test of the dropdown, dialog, or file-picker interactions. The store and
+  library layers underneath them are unit-tested; the pointer interactions are not.
+- `navigator.clipboard` failures fall back to writing the hash to the URL rather than
+  showing a manual copy field.
+- Landing page is still Phase 1's hero-only page; the animated demo is Phase 6.
+- `npm audit`'s 5 high findings remain (dev-only `braces` chain — see Phase 1).

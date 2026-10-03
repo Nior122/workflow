@@ -1,9 +1,12 @@
 "use client";
 
-import { Maximize, Minus, Plus } from "lucide-react";
+import { LayoutGrid, Maximize, Minus, Plus } from "lucide-react";
 import { useReactFlow, useViewport } from "@xyflow/react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { autoLayout } from "@/lib/layout";
+import { useWorkflowStore } from "@/store/workflowStore";
+import { useUiStore } from "@/store/uiStore";
 
 /**
  * Custom zoom controls, replacing React Flow's <Controls> so they match the theme
@@ -12,6 +15,20 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 export function ZoomControls({ className }: { className?: string }) {
   const { zoomIn, zoomOut, fitView } = useReactFlow();
   const { zoom } = useViewport();
+
+  const nodes = useWorkflowStore((state) => state.nodes);
+  const edges = useWorkflowStore((state) => state.edges);
+  const replaceGraph = useWorkflowStore((state) => state.replaceGraph);
+  const isRunning = useUiStore((state) => state.isRunning);
+
+  const canLayout = nodes.length > 0 && !isRunning;
+
+  // Re-run the same algorithm the templates use, then frame the result.
+  const handleAutoLayout = () => {
+    if (!canLayout) return;
+    replaceGraph(autoLayout(nodes, edges).nodes, edges);
+    window.requestAnimationFrame(() => fitView({ duration: 280, padding: 0.2 }));
+  };
 
   const zoomLabel = `${Math.round(zoom * 100)}%`;
 
@@ -59,6 +76,23 @@ export function ZoomControls({ className }: { className?: string }) {
       >
         {zoomLabel}
       </span>
+
+      <span aria-hidden className="mx-0.5 h-4 w-px bg-border" />
+
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            onClick={handleAutoLayout}
+            disabled={!canLayout}
+            aria-label="Auto-layout, left to right"
+            className="grid size-7 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-surface-raised hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
+          >
+            <LayoutGrid className="size-3.5" aria-hidden />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent>Auto-layout (left to right)</TooltipContent>
+      </Tooltip>
 
       <Tooltip>
         <TooltipTrigger asChild>

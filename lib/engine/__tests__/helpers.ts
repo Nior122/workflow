@@ -1,7 +1,7 @@
-import { createFlowEdge, createFlowNode, resetNodeIdCounter } from "../registry";
-import type { FlowEdge, FlowNode, NodeType } from "@/types";
-import type { NodeConfig } from "@/types/nodes";
+import { buildEdge, buildNode } from "@/lib/graph-builder";
+import { resetNodeIdCounter } from "../registry";
 import type { EngineEffects } from "../types";
+import type { FlowNode, NodeConfigOf, NodeType } from "@/types";
 
 /**
  * A fake clock and RNG.
@@ -32,46 +32,20 @@ export function makeEffects(random = 0.5) {
   };
 }
 
-let edgeCounter = 0;
-
-/** Build a node with an explicit id and optional config override. */
+/** Thin aliases over the shared graph builder, kept for readable test call sites. */
 export function node<T extends NodeType>(
   id: string,
   type: T,
-  config?: Partial<NodeConfig>,
+  config?: Partial<NodeConfigOf<T>>,
   options: { simulateFailure?: boolean; latencyMs?: number; position?: { x: number; y: number } } = {},
 ): FlowNode {
-  const built = createFlowNode(type, options.position ?? { x: 0, y: 0 }, id);
-
-  return {
-    ...built,
-    id,
-    data: {
-      ...built.data,
-      config: { ...built.data.config, ...(config ?? {}) } as typeof built.data.config,
-      ...(options.simulateFailure !== undefined
-        ? { simulateFailure: options.simulateFailure }
-        : {}),
-      ...(options.latencyMs !== undefined ? { latencyMs: options.latencyMs } : {}),
-    },
-  } as FlowNode;
+  // Widened: callers pass a generic NodeType and want the union back.
+  return buildNode(id, type, config, options) as FlowNode;
 }
 
-/** Build an edge with a stable, readable id. */
-export function edge(
-  source: string,
-  target: string,
-  sourceHandle: "out" | "true" | "false" = "out",
-): FlowEdge {
-  edgeCounter += 1;
-  return createFlowEdge(`e-${source}-${sourceHandle}-${target}-${edgeCounter}`, source, target, {
-    sourceHandle,
-    label: sourceHandle === "out" ? undefined : sourceHandle,
-  });
-}
+export const edge = buildEdge;
 
-/** Reset both id counters so tests are order-independent. */
+/** Reset the id counter so tests are order-independent. */
 export function resetCounters(): void {
   resetNodeIdCounter();
-  edgeCounter = 0;
 }
