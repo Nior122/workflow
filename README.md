@@ -158,7 +158,7 @@ configuration — see [`vercel.json`](vercel.json).
 
 ## Testing
 
-**233 tests across 14 files.** They cover logic, not pixels — which is exactly what the pure
+**242 tests across 15 files.** They cover logic, not pixels — which is exactly what the pure
 engine boundary buys you.
 
 | File | Tests | Covers |
@@ -177,9 +177,13 @@ engine boundary buys you.
 | `lib/__tests__/layout.test.ts` | 8 | column ordering, determinism, cyclic-graph safety |
 | `hooks/__tests__/validation-patch.test.ts` | 8 | the validation patch converges instead of looping |
 | `store/__tests__/run-state-isolation.test.ts` | 4 | run state does not leak between workflows |
+| `components/layout/__tests__/theme-provider.test.ts` | 9 | the pre-paint theme bootstrap and `adoptThemeIfUnset`, in a real jsdom |
 
-Three of these are **negative-controlled**: the fix was reverted and the tests confirmed to
-fail, then restored. A green suite proves nothing about a bug it cannot catch.
+**Six of these are negative-controlled** — the fix was deliberately reverted, the tests
+confirmed to fail, then the fix restored: `validation-patch` (2 failures), the coalescing
+block in `workflow-store-history` (3), `shell-tracks` (6), `run-state-isolation` (3),
+`layout-contract` (2) and `theme-provider` (2). A green suite proves nothing about a bug it
+cannot catch.
 
 There is also `npm run check:contrast`, which parses the HSL tokens out of `globals.css` and
 asserts 13 foreground/background pairs per theme clear WCAG AA.
@@ -256,7 +260,8 @@ primitives in `components/ui`.
 - Pointer interactions (drag-and-drop, handle-to-handle connection, the dropdown and dialog
   menus) are not covered by tests. The logic underneath them is; the interaction itself is
   verified by hand.
-- No headless-browser run in CI, so console-error freedom is asserted from served markup.
+- No headless-browser run in CI — no browser is installable in the build sandbox either — so
+  console-error freedom is asserted from served markup. One test file does opt into jsdom.
 - `npm audit` reports 5 high findings, all one dev-only chain
   (`braces` → `micromatch` → `fast-glob` → `@next/eslint-plugin-next`). The only offered fix
   downgrades `eslint-config-next` to 14.x, which would break Next 16 linting. Not shipped to
@@ -265,11 +270,10 @@ primitives in `components/ui`.
   truncate the URL.
 - Autosave confirmation is throttled to one toast per 15s, because autosave fires ~600ms
   after every edit pause. Failed saves raise immediately.
-- A disabled button shows no tooltip (Radix does not fire pointer events on disabled
-  triggers), so an empty canvas gives no explanation for a disabled Run.
 - Mobile sheets are a fixed `60dvh` with no drag-to-resize, and the compact tier has no
   minimap.
-- No CI workflow; the gate is run by hand. Not deployed to Vercel.
+- Not deployed to Vercel (`vercel.json` is ready). CI runs the full gate on every push via
+  `.github/workflows/ci.yml`.
 
 A fuller list, with what each one would take to close, is in [`REPORT.md`](./REPORT.md) §4.
 

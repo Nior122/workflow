@@ -14,12 +14,13 @@ Run from a clean `.next`:
 | --- | --- | --- |
 | Typecheck | `npx tsc --noEmit` | **0 errors** |
 | Lint | `npm run lint` | **0 errors, 0 warnings** |
-| Unit tests | `npx vitest run` | **233 passed / 14 files** |
+| Unit tests | `npx vitest run` | **242 passed / 15 files** |
 | Build | `npm run build` | **✓ compiled**, `/`, `/_not-found`, `/builder` all static |
 | Contrast | `npm run check:contrast` | **26/26 pass**, worst pair **4.64:1** |
-| Served | `curl / ` and `curl /builder` | **200** and **200** |
+| Served | `curl /` and `curl /builder` | **200** and **200** |
+| CI | `.github/workflows/ci.yml` | runs all five of the above on every push and PR |
 
-Test count over the cycle: 184 → **233**. Files: 10 → **14**.
+Test count over the cycle: 184 → **242**. Files: 10 → **15**.
 
 ---
 
@@ -87,6 +88,18 @@ No browser means no confirmation of any layout, animation, or responsive behavio
 risk: the **106 spacing changes** (each ±2px, applied mechanically, unverifiable here) and
 the grid shell at the four required widths.
 
+**Closed after the report was first drafted** (all three were listed here as open):
+- ~~No CI workflow~~ → `.github/workflows/ci.yml` now runs typecheck, lint, tests,
+  contrast and build on every push and PR. Every command it calls was verified to exist
+  and the lockfile is present for `npm ci`.
+- ~~A disabled Run button shows no tooltip~~ → switched to `aria-disabled` plus a guarded
+  handler, so the "add a trigger node" hint is reachable by mouse *and* keyboard. It also
+  stays in the tab order now.
+- ~~No DOM test environment, so #4 had no test~~ → `jsdom@25.0.1` added as a devDependency
+  and `components/layout/__tests__/theme-provider.test.ts` now exercises the real pre-paint
+  bootstrap script and `adoptThemeIfUnset` in an actual DOM. 9 tests, negative-controlled:
+  removing the "don't override an existing choice" guard gives **2 failures**.
+
 **Known limitations, deliberate:**
 - **Autosave toast is throttled to one per 15s.** It fires ~600ms after every edit pause;
   unthrottled it would be constant noise. Failed saves raise immediately. Change it if you
@@ -96,12 +109,14 @@ the grid shell at the four required widths.
 - **Mobile sheets are a fixed `60dvh`** with no drag-to-resize; the desktop console *is*
   resizable.
 - **The compact tier has no minimap** (`minimapVisible={false}`).
-- **No CI workflow** — the gate is run by hand.
 - **Not deployed to Vercel** (`vercel.json` is ready).
 - **5 `npm audit` high findings left alone deliberately** — `audit fix --force` downgrades
   `eslint-config-next` to 14.x, which breaks Next 16.
-- **No DOM test environment**, so fixes #3, #4 and #5 have no unit test. Adding `jsdom` is a
-  dependency change I did not make unasked.
+- **Two fixes still have no automated test.** #4 is now covered, but **#3**'s
+  `history.replaceState` call and **#5**'s `onNodeClick` wiring both need a rendered React
+  tree with React Flow mounted. That means `@testing-library/react` plus DOM shims for
+  `ResizeObserver`; I judged that a larger change than the two lines it would cover, and
+  both are one click to check by hand (steps 8 and 11 below).
 
 ---
 

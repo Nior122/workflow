@@ -7,7 +7,7 @@
 > **`REPORT.md`**; the issue-by-issue audit log with root causes and evidence is
 > **`FIXES.md`**.
 > Branch `arena/01a102bb-workflow`. Final gate, from a clean `.next`: `tsc --noEmit` 0,
-> `eslint` 0/0, **233 unit tests / 14 files**, `npm run check:contrast` 26/26 (worst
+> `eslint` 0/0, **242 unit tests / 15 files**, `npm run check:contrast` 26/26 (worst
 > 4.64:1), `next build` (3 static routes), `GET /` and `GET /builder` both 200.
 > **No browser exists in this sandbox**, so nothing has been visually verified and the
 > Phase 5 screenshots could not be taken — see `REPORT.md` §2.
@@ -1219,3 +1219,30 @@ canvas cell carries `min-w-0 overflow-hidden`. Negative-controlled: a raw `z-50`
 tested and negative-controlled. Nothing has been looked at. The 106 spacing changes and the
 grid shell are the two things most worth a human eye, and `REPORT.md` §6 lists exactly what
 to check.
+
+
+### Post-QA hardening (COMPLETE)
+
+Three items closed from the `REPORT.md` §4 "still imperfect" list:
+
+1. **`.github/workflows/ci.yml`** — typecheck, lint, tests, contrast and build on every push
+   and PR. Every script it invokes was verified to exist in `package.json`, and
+   `package-lock.json` is present so `npm ci` will work.
+2. **The disabled Run button now explains itself.** `disabled` → `aria-disabled` + a guarded
+   `onClick`. A disabled button fires no pointer events, so Radix never opened the tooltip —
+   backwards, since "add a trigger node" is the one hint an empty canvas needs. It also stays
+   in the tab order, so the hint is reachable by keyboard.
+3. **`jsdom@25.0.1` (devDependency)** unblocked a real DOM test for QA fix #4.
+   `components/layout/__tests__/theme-provider.test.ts` opts in per file with a
+   `// @vitest-environment jsdom` docblock, so the global environment stays `node` and the
+   "the engine is pure" signal survives. It evaluates the actual `THEME_INIT_SCRIPT` string
+   against a real `document`/`localStorage`, including the throwing-localStorage path, and
+   asserts `adoptThemeIfUnset` never overrides an existing choice. Negative control: removing
+   the guard gives **2 failures**.
+
+**Still untested, deliberately:** #3's `history.replaceState` call and #5's `onNodeClick`
+wiring both need a rendered React tree with React Flow mounted — `@testing-library/react`
+plus `ResizeObserver` shims, which is more machinery than the two lines it would cover. Both
+are one click to verify by hand (`REPORT.md` §6, steps 8 and 11).
+
+**Test count 233 → 242** (15 files).

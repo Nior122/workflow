@@ -4,9 +4,14 @@ import { defineConfig } from "vitest/config";
 const root = fileURLToPath(new URL(".", import.meta.url));
 
 /**
- * The engine is pure TypeScript with no DOM dependency, so tests run in a plain
- * Node environment — deliberately not jsdom. If a test here ever needs a DOM,
- * that is a signal the engine has leaked UI concerns into lib/engine.
+ * The default environment is a plain Node one, deliberately not jsdom. The engine
+ * is pure TypeScript; if a test under `lib/engine` ever needs a DOM, that is a
+ * signal UI concerns have leaked into it.
+ *
+ * The rare test that genuinely needs a DOM — currently only
+ * `components/layout/__tests__/theme-provider.test.ts`, which exercises the
+ * pre-paint bootstrap script — opts in per file with a
+ * `// @vitest-environment jsdom` docblock rather than changing the default here.
  */
 export default defineConfig({
   resolve: {

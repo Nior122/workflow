@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+# The gate that was previously run by hand: typecheck, lint, unit tests, the
+# WCAG contrast check, and a production build. `check:contrast` is included
+# because it caught two real light-theme AA failures that a build never would.
+jobs:
+  verify:
+    name: Typecheck, lint, test, build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Contrast (WCAG AA, both themes)
+        run: npm run check:contrast
+
+      - name: Build
+        run: npm run build

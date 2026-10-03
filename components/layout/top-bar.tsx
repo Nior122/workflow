@@ -131,11 +131,19 @@ export function TopBar() {
         ) : (
           <Tooltip>
             <TooltipTrigger asChild>
+              {/* `aria-disabled` plus a guarded handler rather than `disabled`:
+                  a disabled button fires no pointer events, so Radix would never
+                  open the tooltip — exactly backwards, since "add a trigger node"
+                  is the one hint an empty canvas actually needs. It stays in the
+                  tab order too, so the explanation is reachable by keyboard. */}
               <Button
                 size="sm"
-                onClick={() => void run()}
-                disabled={nodeCount === 0}
-                className="glow-accent"
+                onClick={() => {
+                  if (nodeCount === 0) return;
+                  void run();
+                }}
+                aria-disabled={nodeCount === 0}
+                className={cn("glow-accent", nodeCount === 0 && "opacity-50")}
                 aria-label="Run the workflow"
               >
                 <Play aria-hidden />
