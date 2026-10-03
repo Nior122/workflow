@@ -3,12 +3,15 @@
 import { memo, type ReactNode } from "react";
 import { Handle, Position } from "@xyflow/react";
 import { motion } from "framer-motion";
-import type { LucideIcon } from "lucide-react";
+import { AlertTriangle, Check, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CATEGORY_LABEL, nodeAccentVars } from "@/config/theme";
 import { NODE_WIDTH } from "@/config/constants";
 import { SOURCE_HANDLE_OUT, TARGET_HANDLE_IN } from "@/types/edges";
 import type { NodeCategory } from "@/types/nodes";
+import type { ValidationIssue } from "@/types/validation";
+import type { NodeRunStatus } from "@/types/run";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useUiStore } from "@/store/uiStore";
 
 export type BaseNodeProps = {
@@ -24,6 +27,10 @@ export type BaseNodeProps = {
   /** Handle ids on the output side; ["out"] for everything except conditions. */
   outputs: string[];
   selected?: boolean;
+  /** Blocking issues; renders a red ring plus a badge listing them. */
+  errors?: ValidationIssue[];
+  /** Live execution status, drives the pulse / check / shake / dim states. */
+  status?: NodeRunStatus;
 };
 
 /**
@@ -44,6 +51,8 @@ function BaseNodeInner({
   hasInput,
   outputs,
   selected,
+  errors,
+  status = "idle",
 }: BaseNodeProps) {
   const isRunning = useUiStore((state) => state.isRunning);
 
@@ -59,6 +68,7 @@ function BaseNodeInner({
         "shadow-[0_1px_2px_rgb(0_0_0/0.3),0_8px_24px_-12px_rgb(0_0_0/0.5)]",
         "transition-[border-color,box-shadow] duration-200",
         selected && "border-[var(--node-accent)] glow-accent",
+        errors && errors.length > 0 && "border-error/70 glow-error",
         isRunning && !selected && "opacity-95",
       )}
     >
@@ -67,6 +77,69 @@ function BaseNodeInner({
         aria-hidden
         className="absolute top-3 bottom-3 left-0 w-[3px] rounded-full bg-[var(--node-accent)]"
       />
+
+      {/* Live status: a pulsing ring while running, a check once done. */}
+      {status === "running" && (
+        <motion.span
+          aria-hidden
+          className="pointer-events-none absolute -inset-1 rounded-xl border-2 border-accent"
+          animate={{ opacity: [0.35, 0.9, 0.35], scale: [0.99, 1.02, 0.99] }}
+          transition={{ duration: 1.1, repeat: Infinity, ease: "easeInOut" }}
+        />
+      )}
+
+      {(status === "running" || status === "success" || status === "error") && (
+        <span
+          role="status"
+          aria-label={`Node status: ${status}`}
+          className={cn(
+            "absolute -bottom-2 -right-2 z-10 grid size-5 place-items-center rounded-full",
+            "border bg-surface-raised shadow",
+            status === "running" && "border-accent text-accent",
+            status === "success" && "border-success text-success",
+            status === "error" && "border-error text-error",
+          )}
+        >
+          {status === "running" ? (
+            <motion.span
+              aria-hidden
+              className="size-2.5 rounded-full border-2 border-accent border-t-transparent"
+              animate={{ rotate: 360 }}
+              transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
+            />
+          ) : status === "success" ? (
+            <Check className="size-3" aria-hidden strokeWidth={3} />
+          ) : (
+            <AlertTriangle className="size-3" aria-hidden strokeWidth={2.5} />
+          )}
+        </span>
+      )}
+
+      {errors && errors.length > 0 && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span
+              role="status"
+              aria-label={`${errors.length} configuration ${errors.length === 1 ? "error" : "errors"}`}
+              className="absolute -top-2 -right-2 z-10 grid size-5 cursor-help place-items-center rounded-full border border-error bg-surface-raised text-error shadow"
+            >
+              <AlertTriangle className="size-3" aria-hidden />
+            </span>
+          </TooltipTrigger>
+          <TooltipContent className="max-w-64 border-error/40">
+            <ul className="space-y-1">
+              {errors.map((issue) => (
+                <li key={`${issue.code}-${issue.message}`} className="flex gap-1.5">
+                  <span aria-hidden className="text-error">
+                    &bull;
+                  </span>
+                  <span>{issue.message}</span>
+                </li>
+              ))}
+            </ul>
+          </TooltipContent>
+        </Tooltip>
+      )}
 
       <header className="flex items-start gap-2.5 px-3.5 pt-3 pb-2">
         <span

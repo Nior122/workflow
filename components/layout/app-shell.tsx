@@ -5,16 +5,20 @@ import { ReactFlowProvider } from "@xyflow/react";
 import { TopBar } from "./top-bar";
 import { MobileNotice } from "./mobile-notice";
 import { Palette } from "@/components/panels/palette";
+import { Inspector } from "@/components/panels/inspector";
+import { BottomPanel } from "@/components/panels/bottom-panel";
 import { FlowCanvas } from "@/components/canvas/flow-canvas";
 import { CanvasElementProvider } from "@/components/canvas/canvas-context";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAddNodeAtCenter } from "@/hooks/use-canvas-actions";
 import { useMediaQuery } from "@/hooks/use-media-query";
+import { useLiveValidation } from "@/hooks/use-live-validation";
 import { MOBILE_BREAKPOINT_PX } from "@/config/constants";
 import { useUiStore } from "@/store/uiStore";
 
 /**
- * Builder layout: top bar over a palette | canvas split.
+ * Builder layout: top bar over palette | canvas | inspector, with the run console
+ * docked underneath.
  *
  * ReactFlowProvider sits at this level rather than around the canvas alone so the
  * palette can ask the flow instance for the visible centre when adding a node by
@@ -23,6 +27,9 @@ import { useUiStore } from "@/store/uiStore";
 export function AppShell() {
   const isNarrow = useMediaQuery(`(max-width: ${MOBILE_BREAKPOINT_PX - 1}px)`);
   const showMinimap = useUiStore((state) => state.showMinimap);
+
+  // Writes graph-level validation issues onto the nodes that caused them.
+  useLiveValidation();
 
   return (
     <TooltipProvider>
@@ -39,7 +46,11 @@ export function AppShell() {
               <main className="relative min-w-0 flex-1">
                 <FlowCanvas minimapVisible={showMinimap && !isNarrow} readOnly={isNarrow} />
               </main>
+
+              {!isNarrow && <Inspector />}
             </div>
+
+            {!isNarrow && <BottomPanel />}
           </div>
         </CanvasElementProvider>
       </ReactFlowProvider>

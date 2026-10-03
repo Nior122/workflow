@@ -1,19 +1,16 @@
 import type { NodeTypes } from "@xyflow/react";
-import { AiPromptNode } from "./ai-prompt-node";
-import { LogNode } from "./log-node";
-import { ManualTriggerNode } from "./manual-trigger-node";
+import { createNodeComponent } from "./flow-node";
+import { listNodeDefs } from "@/lib/engine/registry";
+import type { NodeType } from "@/types/nodes";
 
 /**
- * Module-level so the object identity is stable across renders — recreating this
- * inside a component makes React Flow remount every node on each render.
+ * Built once at module level from the engine registry, so the object identity is
+ * stable across renders — recreating it inside a component would make React Flow
+ * remount every node on each render.
  *
- * The cast is required because each component is typed for one specific node type
- * (`NodeProps<FlowNodeOf<"action.aiPrompt">>`), while React Flow's map is keyed
- * loosely by string. The keys here match the registry exactly, and only types
- * present in `lib/engine/registry.ts` can ever be created, so the narrowing holds.
+ * Deriving it from `listNodeDefs()` means adding a node type registers it here
+ * automatically; there is no second list to forget.
  */
-export const nodeTypes = {
-  "trigger.manual": ManualTriggerNode,
-  "action.aiPrompt": AiPromptNode,
-  "output.log": LogNode,
-} as unknown as NodeTypes;
+export const nodeTypes: NodeTypes = Object.fromEntries(
+  listNodeDefs().map((def) => [def.type, createNodeComponent(def.type as NodeType)]),
+) as unknown as NodeTypes;

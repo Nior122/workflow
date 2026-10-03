@@ -9,40 +9,94 @@ import {
   resetNodeIdCounter,
 } from "../registry";
 import { LATENCY_MAX_MS, LATENCY_MIN_MS, NODE_WIDTH } from "@/config/constants";
-import type { NodeType } from "@/types/nodes";
+import { NODE_CATEGORY, type NodeType } from "@/types/nodes";
 
 describe("node registry", () => {
-  it("exposes exactly the three node types implemented in Phase 1", () => {
+  it("exposes all thirteen node types, grouped triggers → actions → outputs", () => {
     expect(listNodeDefs().map((def) => def.type)).toEqual([
       "trigger.manual",
+      "trigger.webhook",
+      "trigger.schedule",
       "action.aiPrompt",
+      "action.httpRequest",
+      "action.transform",
+      "action.condition",
+      "action.delay",
+      "action.textFormatter",
+      "output.email",
+      "output.slack",
+      "output.sheets",
       "output.log",
     ]);
   });
 
-  it("reports unimplemented node types as unavailable rather than half-present", () => {
-    expect(isNodeTypeImplemented("trigger.manual")).toBe(true);
-    expect(isNodeTypeImplemented("action.condition")).toBe(false);
-    expect(getNodeDef("action.condition")).toBeUndefined();
+  it("covers every member of the NodeType union exactly once", () => {
+    const types = listNodeDefs().map((def) => def.type);
+    expect(new Set(types).size).toBe(types.length);
+    // Every NodeType in types/nodes.ts must appear in NODE_CATEGORY, which is
+    // exhaustive over the union — so its keys are the full set.
+    expect([...types].sort()).toEqual(Object.keys(NODE_CATEGORY).sort());
   });
 
-  it("throws when an unimplemented type is demanded", () => {
-    expect(() => requireNodeDef("action.condition")).toThrow(/No node definition/);
+  it("reports a genuinely unknown node type as unavailable rather than half-present", () => {
+    const unknown = "action.doesNotExist" as NodeType;
+    expect(isNodeTypeImplemented(unknown)).toBe(false);
+    expect(getNodeDef(unknown)).toBeUndefined();
+  });
+
+  it("throws when an unknown type is demanded", () => {
+    expect(() => requireNodeDef("action.doesNotExist" as NodeType)).toThrow(
+      /No node definition/,
+    );
   });
 
   it.each([
-    ["trigger.manual", { inputs: 0, outputs: 1 }],
-    ["action.aiPrompt", { inputs: 1, outputs: 1 }],
-    ["output.log", { inputs: 1, outputs: 0 }],
-  ] as [NodeType, { inputs: number; outputs: number }][])(
-    "%s has the port shape its category requires",
-    (type, expected) => {
+    ["trigger.manual", 0, 1],
+    ["trigger.webhook", 0, 1],
+    ["trigger.schedule", 0, 1],
+    ["action.aiPrompt", 1, 1],
+    ["action.httpRequest", 1, 1],
+    ["action.transform", 1, 1],
+    ["action.condition", 1, 2],
+    ["action.delay", 1, 1],
+    ["action.textFormatter", 1, 1],
+    ["output.email", 1, 0],
+    ["output.slack", 1, 0],
+    ["output.sheets", 1, 0],
+    ["output.log", 1, 0],
+  ] as [NodeType, number, number][])(
+    "%s exposes %i input(s) and %i output(s)",
+    (type, inputCount, outputCount) => {
       const def = requireNodeDef(type);
-      expect(def.inputs).toHaveLength(expected.inputs);
-      expect(def.outputs).toHaveLength(expected.outputs);
-      expect(def.category).toBe(def.category); // sanity: category is set
+      expect(def.inputs).toHaveLength(inputCount);
+      expect(def.outputs).toHaveLength(outputCount);
+      expect(def.category).toBe(NODE_CATEGORY[type]);
     },
   );
+
+  it("gives the condition node true/false output handles, not a generic one", () => {
+    const def = requireNodeDef("action.condition");
+    expect(def.outputs.map((port) => port.id)).toEqual(["true", "false"]);
+  });
+
+  it("never gives a trigger an input handle", () => {
+    for (const def of listNodeDefs().filter((entry) => entry.category === "trigger")) {
+      expect(def.inputs).toHaveLength(0);
+    }
+  });
+
+  it("never gives an output node an output handle", () => {
+    for (const def of listNodeDefs().filter((entry) => entry.category === "output")) {
+      expect(def.outputs).toHaveLength(0);
+    }
+  });
+
+  it("ships a default config that passes its own validation", () => {
+    for (const def of listNodeDefs()) {
+      const issues = def.validateConfig(def.defaultConfig);
+      expect(issues, `${def.type} default config is invalid`).toEqual([]);
+    }
+  });
 
   it("keeps every node's latency inside the visible-animation range", () => {
     for (const def of listNodeDefs()) {

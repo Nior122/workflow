@@ -223,6 +223,21 @@
   animation: ff-dash 0.6s linear infinite;
 }
 
+/* Error feedback: a short horizontal shake, respecting reduced-motion. */
+@keyframes ff-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-5px); }
+  40% { transform: translateX(5px); }
+  60% { transform: translateX(-3px); }
+  80% { transform: translateX(3px); }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .ff-shake {
+    animation: ff-shake 0.42s ease-in-out 1;
+  }
+}
+
 @keyframes ff-dash {
   to {
     stroke-dashoffset: -9;

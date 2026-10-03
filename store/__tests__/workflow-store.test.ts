@@ -37,8 +37,9 @@ describe("addNode", () => {
     expect(nodes[0].type).toBe("trigger.manual");
   });
 
-  it("returns null for a node type that is not implemented yet", () => {
-    expect(useWorkflowStore.getState().addNode("action.condition", { x: 0, y: 0 })).toBeNull();
+  it("returns null for a node type the registry does not know", () => {
+    const unknown = "action.doesNotExist" as NodeType;
+    expect(useWorkflowStore.getState().addNode(unknown, { x: 0, y: 0 })).toBeNull();
     expect(useWorkflowStore.getState().nodes).toHaveLength(0);
   });
 });
