@@ -16,7 +16,7 @@ export function SpeedControl() {
       role="radiogroup"
       aria-label="Execution speed"
       className={cn(
-        "flex items-center gap-0.5 rounded-md border border-border bg-surface-raised p-0.5",
+        "flex items-center gap-1 rounded-md border border-border bg-surface-raised p-1",
         isRunning && "opacity-60",
       )}
     >
@@ -32,7 +32,7 @@ export function SpeedControl() {
             "rounded px-2 py-1 font-mono text-[11px] transition-colors",
             speed === option
               ? "bg-accent text-accent-contrast"
-              : "text-muted-foreground hover:text-foreground",
+              : "text-muted-foreground hover:text-foreground active:bg-border",
             isRunning && "cursor-not-allowed",
           )}
         >

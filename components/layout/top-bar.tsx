@@ -9,9 +9,11 @@ import { ThemeToggle } from "./theme-toggle";
 import { SpeedControl } from "@/components/panels/speed-control";
 import { WorkflowMenu } from "@/components/panels/workflow-menu";
 import { TemplateGallery } from "@/components/panels/template-gallery";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { useRunWorkflow } from "@/hooks/use-run-workflow";
 import { useRunStore } from "@/store/runStore";
+import { useUiStore } from "@/store/uiStore";
 import { useWorkflowStore } from "@/store/workflowStore";
 import { useIsRunning } from "@/store/uiStore";
 import { cn } from "@/lib/utils";
@@ -35,7 +37,10 @@ export function TopBar() {
 
   const { run, cancel } = useRunWorkflow();
   const [editingName, setEditingName] = useState(false);
-  const [templatesOpen, setTemplatesOpen] = useState(false);
+  // In the store rather than local state so the canvas empty state can open the
+  // same dialog instead of mounting a second copy of the gallery.
+  const templatesOpen = useUiStore((state) => state.templatesOpen);
+  const setTemplatesOpen = useUiStore((state) => state.setTemplatesOpen);
 
   useKeyboardShortcuts();
 
@@ -50,7 +55,7 @@ export function TopBar() {
     <header className="relative flex h-13 shrink-0 items-center gap-2 border-b border-border bg-surface px-3 sm:gap-3 sm:px-4">
       <Link
         href="/"
-        className="flex shrink-0 items-center gap-2 rounded-md transition-opacity hover:opacity-85"
+        className="flex shrink-0 items-center gap-2 rounded-md transition-opacity hover:opacity-85 active:opacity-70"
         aria-label="FlowForge home"
       >
         <span className="bg-gradient-ember grid size-7 place-items-center rounded-md text-accent-contrast sm:size-8">
@@ -83,7 +88,7 @@ export function TopBar() {
           type="button"
           onClick={() => setEditingName(true)}
           aria-label={`Rename workflow, currently ${workflowName}`}
-          className="min-w-0 max-w-36 truncate rounded-md px-2 py-1 text-left text-sm text-foreground transition-colors hover:bg-surface-raised sm:max-w-52"
+          className="min-w-0 max-w-36 truncate rounded-md px-2 py-1 text-left text-sm text-foreground transition-colors hover:bg-surface-raised active:bg-border sm:max-w-52"
         >
           {workflowName}
         </button>
@@ -93,37 +98,56 @@ export function TopBar() {
         {nodeCount} node{nodeCount === 1 ? "" : "s"}
       </span>
 
-      <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="hidden md:inline-flex"
-          onClick={() => setTemplatesOpen(true)}
-        >
-          <LayoutTemplate aria-hidden />
-          Templates
-        </Button>
+      <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-2">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="hidden md:inline-flex"
+              onClick={() => setTemplatesOpen(true)}
+            >
+              <LayoutTemplate aria-hidden />
+              Templates
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Start from one of four prebuilt workflows</TooltipContent>
+        </Tooltip>
 
         <span className="hidden sm:block">
           <SpeedControl />
         </span>
 
         {isRunning ? (
-          <Button variant="danger" size="sm" onClick={cancel} aria-label="Stop the run">
-            <Square aria-hidden />
-            <span className="hidden sm:inline">Stop</span>
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="danger" size="sm" onClick={cancel} aria-label="Stop the run">
+                <Square aria-hidden />
+                <span className="hidden sm:inline">Stop</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Cancel the run in progress</TooltipContent>
+          </Tooltip>
         ) : (
-          <Button
-            size="sm"
-            onClick={() => void run()}
-            disabled={nodeCount === 0}
-            className="glow-accent"
-            aria-label="Run the workflow"
-          >
-            <Play aria-hidden />
-            <span className="hidden sm:inline">Run</span>
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                size="sm"
+                onClick={() => void run()}
+                disabled={nodeCount === 0}
+                className="glow-accent"
+                aria-label="Run the workflow"
+              >
+                <Play aria-hidden />
+                <span className="hidden sm:inline">Run</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {nodeCount === 0
+                ? "Add a trigger node to enable the run"
+                : "Execute the workflow from its trigger"}
+            </TooltipContent>
+          </Tooltip>
         )}
 
         <WorkflowMenu onOpenTemplates={() => setTemplatesOpen(true)} />
@@ -142,7 +166,7 @@ export function TopBar() {
             exit={{ opacity: 0, y: -6 }}
             className={cn(
               "absolute top-full left-1/2 z-dock mt-2 flex w-[min(28rem,calc(100%-2rem))] -translate-x-1/2",
-              "items-center gap-2 rounded-lg border border-error/40 bg-surface-raised px-3.5 py-2 shadow-lg",
+              "items-center gap-2 rounded-lg border border-error/40 bg-surface-raised px-4 py-2 shadow-lg",
             )}
           >
             <AlertCircle className="size-4 shrink-0 text-error" aria-hidden />
@@ -151,7 +175,7 @@ export function TopBar() {
               type="button"
               onClick={() => dismissBlocking(null)}
               aria-label="Dismiss"
-              className="rounded px-1.5 py-0.5 text-[11px] text-muted-foreground transition-colors hover:text-foreground"
+              className="rounded px-2 py-1 text-[11px] text-muted-foreground transition-colors hover:text-foreground active:bg-border"
             >
               Dismiss
             </button>

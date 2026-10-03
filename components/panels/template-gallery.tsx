@@ -75,12 +75,12 @@ export function TemplateGallery({
               transition={{ delay: index * 0.05, duration: 0.2 }}
               className={cn(
                 "flex flex-col rounded-lg border border-border bg-surface-raised p-4",
-                "transition-colors hover:border-accent/45",
+                "transition-colors hover:border-accent/45 active:border-accent/70",
               )}
             >
               <div className="flex items-start justify-between gap-2">
                 <h3 className="text-sm font-semibold text-foreground">{template.name}</h3>
-                <span className="shrink-0 rounded-full border border-border px-2 py-0.5 font-mono text-[10px] text-muted-foreground">
+                <span className="shrink-0 rounded-full border border-border px-2 py-1 font-mono text-[10px] text-muted-foreground">
                   {template.category}
                 </span>
               </div>

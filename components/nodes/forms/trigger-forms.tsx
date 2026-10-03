@@ -69,7 +69,7 @@ export function WebhookTriggerForm({
   return (
     <div className="space-y-4">
       <Field label="Webhook URL" hint="simulated">
-        <div className="flex items-center gap-1.5 rounded-md border border-border bg-surface px-2.5 py-1.5">
+        <div className="flex items-center gap-2 rounded-md border border-border bg-surface px-3 py-2">
           <code className="min-w-0 flex-1 truncate font-mono text-[11px] text-muted-foreground">
             {fakeUrl}
           </code>
@@ -146,14 +146,14 @@ export function ScheduleTriggerForm({
         />
       </Field>
 
-      <div className="flex flex-wrap gap-1.5">
+      <div className="flex flex-wrap gap-2">
         {CRON_PRESETS.map((preset) => (
           <button
             key={preset.value}
             type="button"
             disabled={disabled}
             onClick={() => onChange({ ...config, cron: preset.value })}
-            className="rounded-full border border-border px-2.5 py-1 text-[10px] text-muted-foreground transition-colors hover:border-accent/50 hover:text-accent disabled:opacity-40"
+            className="rounded-full border border-border px-3 py-1 text-[10px] text-muted-foreground transition-colors hover:border-accent/50 hover:text-accent disabled:opacity-40"
           >
             {preset.label}
           </button>
@@ -166,7 +166,7 @@ export function ScheduleTriggerForm({
           value={TIMEZONES.includes(config.timezone as (typeof TIMEZONES)[number]) ? config.timezone : TIMEZONES[0]}
           disabled={disabled}
           onChange={(event) => onChange({ ...config, timezone: event.target.value })}
-          className="w-full cursor-pointer rounded-md border border-border bg-surface px-2.5 py-1.5 text-sm text-foreground focus:border-accent focus:outline-none"
+          className="w-full cursor-pointer rounded-md border border-border bg-surface px-3 py-2 text-sm text-foreground focus:border-accent focus:outline-none"
         >
           {TIMEZONES.map((tz) => (
             <option key={tz} value={tz}>

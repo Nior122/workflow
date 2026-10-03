@@ -3,11 +3,12 @@
 > **Living document.** Re-read this file at the start of every phase. Update it at the end of
 > every phase (tick the phase, list files, record decisions, list known issues).
 >
-> Status: **Build phases 1–8 complete. QA Phases 1 (audit), 2 (P0/P1 fixes) and 3 (layout
-> + z-index scale) complete.** Awaiting "continue" to start QA Phase 4 (UX polish).
+> Status: **Build phases 1–8 complete. QA Phases 1–4 complete** (audit, P0/P1 fixes,
+> layout + z-index scale, UX polish). Awaiting "continue" to start QA Phase 5 (verify +
+> evidence) — note that screenshots are impossible here, see FIXES.md.
 > Branch `arena/01a102bb-workflow`. All gates green: `tsc --noEmit` 0, `eslint` 0/0,
-> **221 unit tests / 12 files**, `next build` (3 static routes), and a live `next dev`
-> server returning 200 on `/` and `/builder`.
+> **225 unit tests / 13 files**, `npm run check:contrast` 26/26, `next build`
+> (3 static routes), and a live `next dev` server returning 200 on `/` and `/builder`.
 > The QA audit itself lives in **`FIXES.md`** — that is the current source of truth for
 > known issues. Sections 1–11 below describe the build; issue numbers there predate the
 > audit and do not correspond to `FIXES.md`.
@@ -858,7 +859,7 @@ modules), `components/nodes/base-node.tsx` (validation badges), `components/node
 | Dead anchors | diffed rendered `href="#…"` against rendered `id="…"` | hrefs `['demo']`, ids include `demo` → **no dead anchors** |
 | Served CSS | fetched `/_next/static/chunks/_0zzy_4s._.css` | light `--accent: 17 88% 40%`, `--accent-hot: 26 90% 37%`; dark `16 100% 60%` / `32 100% 61%`; `:focus-visible` ring present |
 | Demo markup | grepped served `/` | 3 `<animateMotion>` + 3 `keyPoints`, 5 nodes, 3 particles, 1 spinner at SSR phase 0, console line `▸ trigger.webhook  running…` — matches the phase-0 state exactly |
-| Contrast | computed WCAG ratios from the tokens parsed back out of `globals.css` | **all 12 pairs ≥ 4.5:1 in both themes** (see below) |
+| Contrast | computed WCAG ratios from the tokens parsed back out of `globals.css` | **all 12 *accent/foreground* pairs ≥ 4.5:1 in both themes** (see below). ⚠️ Superseded in QA Phase 4: this check covered only the accent and foreground pairs. `success` (3.43:1) and `warning` (3.26:1) in the light theme were never measured and both failed AA; they are now 4.94:1 and 4.93:1. Use `npm run check:contrast` (13 pairs × 2 themes). |
 
 **Files created:** `components/landing/{demo-loop,feature-grid}.tsx`.
 
@@ -895,6 +896,11 @@ three-step grid), `app/globals.css` (light-theme accent tokens),
    Replaced with `--accent: 17 88% 40%` (#C2410C) and `--accent-hot: 26 90% 37%` (#B45309).
    Post-fix, all six light pairs and all six dark pairs clear 4.5:1. The dark theme (the
    default) was already compliant and was left alone.
+   **Superseded in QA Phase 4:** "all twelve pairs" meant the twelve *accent and foreground*
+   pairs, and that was accurate for them — but the check never covered `success` or
+   `warning`, and both failed AA in the light theme. Generalising from a partial matrix was
+   the actual mistake. `scripts/check-contrast.mjs` now measures 13 pairs per theme and is
+   wired to `npm run check:contrast`.
    **Lesson recorded:** `--accent-hot` looks decorative because it mostly feeds gradients and
    glows, but `.text-gradient-ember` and the button gradient make it load-bearing text and
    label background. Audit gradient stops as text.
@@ -1137,3 +1143,52 @@ selection box whenever `selectionKeyCode` is held, and `selectionOnDrag` is iner
 **Known limitation:** no browser in this sandbox, so the layout is verified from served
 markup, compiled CSS and executed track arithmetic — never from pixels. Phase 5 screenshots
 remain impossible.
+
+
+### QA Phase 4 — UX polish (COMPLETE)
+
+**4px spacing grid.** 106 spacing/position utilities were off-grid across 26 files and all
+were snapped to the nearest 4px step; zero remain (verified by grep). **38 dimension values
+were deliberately left alone** — `size-3.5` (the 14px icon size), `size-2.5`, `size-1.5`,
+`h-1.5`, `h-0.5` — because they are component dimensions, not spacing.
+
+**Radius was already consistent:** every `rounded-*` comes from the four `--radius-*`
+tokens, with no arbitrary `rounded-[Npx]` anywhere.
+
+**Focus was already global** via `@layer base :focus-visible`, covering all 37 interactive
+elements. **`active:` was the genuine gap** — only the `default` Button variant had one.
+Added to all six variants plus ~22 other controls, including the mobile dock (touch has no
+hover).
+
+**New: `npm run check:contrast`** (`scripts/check-contrast.mjs`) parses the HSL tokens out
+of `globals.css` and computes WCAG ratios for 13 pairs × 2 themes. It found two real
+light-theme failures — `success` 3.43:1 and `warning` 3.26:1 — fixed by dropping lightness
+37%→30% / 38%→30% at unchanged hue and saturation. All 26 pairs now pass, worst 4.64:1.
+Two bugs in the checker itself were caught before its output was trusted: `.dark` was
+matching `@custom-variant dark (&:is(.dark *))` so both themes measured `:root`, and
+`Number("9%")` is `NaN`.
+
+**Fixed:** #11 `adoptThemeIfUnset()` makes an imported workflow's theme apply without ever
+overriding a deliberate browser choice · #12 `consoleOpen` deleted, `PanelId` narrowed ·
+#14 `resetStatuses()` now called from `switchWorkflow`/`deleteWorkflow`/`hydrate`, proven by
+a red-then-green test in `store/__tests__/run-state-isolation.test.ts` · #16 empty-state
+"Browse templates" button (`templatesOpen` moved into `uiStore` so one gallery dialog is
+shared) · #17 shared `store/toastStore.ts` + `components/ui/toast-viewport.tsx`, with a new
+`z-toast: 60` scale step.
+
+**Retracted #15:** `beginRun` replaces the whole `nodeStatuses` record and `useNodeStatus`
+defaults to `?? "idle"`, so unreachable nodes already render idle. This is the **second
+finding retracted for the same reason** — reasoning from the call site without reading the
+implementation. Rule going forward: read the function before calling it a bug.
+
+**Toolbar tooltips** on Templates/Run/Stop, and a new `components/ui/kbd.tsx` rendering
+`⌘ ⇧ Z` or `Ctrl Shift Z` via `useSyncExternalStore` (no Mac hydration mismatch). Only
+shortcuts that exist in `use-keyboard-shortcuts.ts` are advertised.
+
+**Judgement call to revisit:** autosave fires ~600ms after every edit pause, so its "Saved"
+toast is throttled to one per 15s rather than every time. Failed saves raise immediately.
+
+**Test count 221 → 225** (13 files). Files added: `store/toastStore.ts`,
+`components/ui/toast-viewport.tsx`, `components/ui/kbd.tsx`,
+`components/layout/__tests__/shell-tracks.test.ts` (Phase 3),
+`store/__tests__/run-state-isolation.test.ts`, `scripts/check-contrast.mjs`.

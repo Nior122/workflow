@@ -26,6 +26,7 @@ import {
   resetNodeIdCounter,
 } from "@/lib/engine/registry";
 import { createWorkflow, type Viewport, type Workflow } from "@/types/workflow";
+import { useRunStore } from "./runStore";
 import { DEFAULT_VIEWPORT, RUN_HISTORY_LIMIT } from "@/config/constants";
 import type { RunResult } from "@/types/run";
 
@@ -446,6 +447,11 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       );
 
       resetNodeIdCounter();
+      // Node ids restart from node-1, so the target workflow's nodes are
+      // different nodes wearing the same ids. Any live status left in the run
+      // store would be attributed to the wrong node. History is session-wide
+      // and is deliberately kept.
+      useRunStore.getState().resetStatuses();
       return {
         workflows,
         activeWorkflowId: id,
@@ -467,6 +473,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       if (state.activeWorkflowId !== id) return { workflows: remaining };
 
       const next = remaining[0];
+      useRunStore.getState().resetStatuses();
       return {
         workflows: remaining,
         activeWorkflowId: next.id,
@@ -485,6 +492,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     if (!active) return;
 
     resetNodeIdCounter();
+    useRunStore.getState().resetStatuses();
     set(() => ({
       workflows,
       activeWorkflowId: active.id,

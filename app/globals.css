@@ -29,9 +29,9 @@
   --accent-hot: 26 90% 37%; /* #B45309 */
   --accent-contrast: 40 16% 96%;
 
-  --success: 148 68% 37%; /* #1E9E5A */
+  --success: 148 68% 30%; /* #188149 — 4.94:1 on white, was 3.43:1 */
   --error: 357 68% 53%; /* #D9363E */
-  --warning: 43 89% 38%; /* #B8860B */
+  --warning: 43 89% 30%; /* #916A08 — 4.93:1 on white, was 3.26:1 */
   --skipped: 248 4% 65%; /* #A3A2AA */
 
   --ring: 17 79% 50%;
@@ -106,6 +106,7 @@
        dock            persistent app chrome: top bar, mobile dock.
        menu            dropdown/popover content anchored to the chrome.
        overlay         modal surfaces: dialog, sheet, tooltip.
+       toast           transient feedback, above everything including modals.
 
        page            marketing-page content sitting above its own
                        decorative backgrounds. Unrelated to the builder.
@@ -117,6 +118,7 @@
   --z-index-dock: 30;
   --z-index-menu: 40;
   --z-index-overlay: 50;
+  --z-index-toast: 60;
 }
 
 @layer base {

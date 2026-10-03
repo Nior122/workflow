@@ -81,7 +81,9 @@ export function MobileDock() {
             disabled={disabled}
             aria-expanded={id === "inspector" ? inspectorOpen : open === id}
             className={cn(
-              "relative flex flex-1 flex-col items-center gap-1 py-2.5 text-[10px] font-medium transition-colors",
+              "relative flex flex-1 flex-col items-center gap-1 py-3 text-[10px] font-medium transition-colors",
+              // Touch has no hover; this is the only press feedback a phone gets.
+              "active:bg-surface-raised",
               (id === "inspector" ? inspectorOpen : open === id)
                 ? "text-accent"
                 : "text-muted-foreground",
@@ -105,7 +107,8 @@ export function MobileDock() {
           disabled={!isRunning && nodeCount === 0}
           aria-label={isRunning ? "Stop the run" : "Run the workflow"}
           className={cn(
-            "flex flex-1 flex-col items-center gap-1 py-2.5 text-[10px] font-semibold transition-colors",
+            "flex flex-1 flex-col items-center gap-1 py-3 text-[10px] font-semibold transition-colors",
+            "active:bg-surface-raised",
             "disabled:opacity-40",
             isRunning ? "text-error" : "text-accent",
           )}

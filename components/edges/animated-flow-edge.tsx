@@ -96,7 +96,7 @@ function AnimatedFlowEdgeInner({
         <EdgeLabelRenderer>
           <span
             className={cn(
-              "pointer-events-none absolute rounded-full border px-1.5 py-0.5",
+              "pointer-events-none absolute rounded-full border px-2 py-1",
               "font-mono text-[10px] leading-none select-none",
               data.label === "true"
                 ? "border-success/40 bg-success/15 text-success"

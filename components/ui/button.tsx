@@ -11,17 +11,17 @@ const buttonVariants = cva(
         default:
           "bg-gradient-ember text-accent-contrast shadow-sm hover:brightness-110 active:brightness-95",
         secondary:
-          "bg-surface-raised text-foreground border border-border hover:bg-border/60 hover:border-accent/40",
+          "bg-surface-raised text-foreground border border-border hover:bg-border/60 hover:border-accent/40 active:bg-border active:border-accent/60",
         outline:
-          "border border-border bg-transparent text-foreground hover:border-accent/60 hover:text-accent",
-        ghost: "text-muted-foreground hover:bg-surface-raised hover:text-foreground",
+          "border border-border bg-transparent text-foreground hover:border-accent/60 hover:text-accent active:bg-surface-raised",
+        ghost: "text-muted-foreground hover:bg-surface-raised hover:text-foreground active:bg-border",
         danger:
-          "bg-error/15 text-error border border-error/35 hover:bg-error/25 hover:border-error/60",
-        link: "text-accent underline-offset-4 hover:underline",
+          "bg-error/15 text-error border border-error/35 hover:bg-error/25 hover:border-error/60 active:bg-error/35",
+        link: "text-accent underline-offset-4 hover:underline active:opacity-70",
       },
       size: {
         default: "h-9 px-4 py-2 has-[>svg]:px-3",
-        sm: "h-8 rounded-md gap-1.5 px-3 has-[>svg]:px-2.5 text-xs",
+        sm: "h-8 rounded-md gap-2 px-3 has-[>svg]:px-3 text-xs",
         lg: "h-11 rounded-lg px-6 text-base has-[>svg]:px-5",
         icon: "size-9",
         "icon-sm": "size-8",

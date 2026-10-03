@@ -230,13 +230,21 @@ produce a console warning, but I have not seen it printed.
 
 | # | Issue | File |
 | --- | --- | --- |
-| 11 | `settings.theme` is written by autosave but never read back; theme is duplicated across two storage keys | `hooks/use-persistence.ts`, `theme-provider.tsx` |
-| 12 | `uiStore.consoleOpen` is dead state — no component reads it | `store/uiStore.ts` |
-| 13 | `PROJECT_NOTES.md` header still says "Phase 1 complete. Awaiting continue to start Phase 2" | `PROJECT_NOTES.md` |
-| 14 | Stale `nodeStatuses` survive node deletion; ids can be reused after `resetNodeIdCounter()` in `switchWorkflow`/`hydrate`, so a new node can inherit an old status | `store/runStore.ts`, `store/workflowStore.ts` |
-| 15 | `beginRun` seeds statuses only for `reachableFromTriggers`, so unreachable nodes keep whatever status they had | `hooks/use-run-workflow.ts` |
-| 16 | No empty-state template button on the canvas (your Phase 4 asks for one) | `components/canvas/empty-canvas.tsx` |
-| 17 | No toasts for save/import/export — the workflow menu has a local toast, but autosave is silent | `components/panels/workflow-menu.tsx` |
+| # | Issue | Status |
+| --- | --- | --- |
+| 11 | `settings.theme` written by autosave but never read back | **FIXED** in Phase 4 — `adoptThemeIfUnset()` |
+| 12 | `uiStore.consoleOpen` is dead state | **FIXED** in Phase 4 — removed, `PanelId` narrowed |
+| 13 | `PROJECT_NOTES.md` header stale | **FIXED** in Phase 3 |
+| 14 | Stale `nodeStatuses` survive a workflow switch; ids are reused after `resetNodeIdCounter()` | **FIXED** in Phase 4 — test-first, see below |
+| 15 | ~~`beginRun` leaves unreachable nodes with old statuses~~ | **RETRACTED** — my reading was wrong, see below |
+| 16 | No empty-state template button | **FIXED** in Phase 4 |
+| 17 | Toasts were trapped inside the workflow menu; autosave silent | **FIXED** in Phase 4 |
+
+Plus one new finding, #18, discovered while verifying Phase 4:
+
+| # | Issue | Status |
+| --- | --- | --- |
+| 18 | **Light theme `success` and `warning` fail WCAG AA** — 3.43:1 and 3.26:1 on `surface-raised`. My earlier note claiming "all 12 pairs ≥ 4.5:1, light min 4.64" was wrong. | **FIXED** in Phase 4 |
 
 ---
 
@@ -546,9 +554,143 @@ clipping wrapper, every z-index utility and the `grid-template-columns` transiti
 compiled CSS, and the track arithmetic as executed code. The visual result at 1024–1920px
 is inferred from that, not observed.
 
-## Phase 4 — UX polish (P3)
+## Phase 4 — UX polish (P3) — COMPLETE
 
-_Not started._
+**Gate after the phase:** `tsc --noEmit` 0 · `eslint` 0/0 · **225 passed / 13 files**
+(was 221/12) · `npm run check:contrast` **26/26 pass, worst 4.64:1** · `next build` ✓ ·
+`GET /builder 200`.
+
+### 4px spacing grid
+
+Measured before changing anything: **106 spacing/position utilities** were off the grid
+(`gap-1.5`, `px-2.5`, `py-0.5`, …) across 26 files. All snapped to the nearest 4px step
+(`0.5→1`, `1.5→2`, `2.5→3`, `3.5→4`). Zero remain:
+
+```
+$ grep -rnoE '\b(p|m|gap|space-x|space-y|inset|top|right|bottom|left|px|py|mx|my|mt|mb|ml|mr|pt|pb|pl|pr)-(0\.5|1\.5|2\.5|3\.5)\b' components app | wc -l
+0
+```
+
+**38 values were deliberately left alone**: `size-3.5` (28×, the 14px icon size),
+`size-2.5`, `size-1.5`, `h-1.5`, `h-0.5`. Those are component *dimensions*, not spacing —
+snapping 14px icons to 16px would change the icon system, and `h-0.5` is a 2px hairline
+divider. Verified unchanged after the sweep.
+
+### Radius and border
+
+Already consistent, and I verified it rather than assuming: `rounded-md` 38×,
+`rounded-full` 23×, `rounded-lg` 11×, `rounded-xl` 4× — every one from the four `--radius-*`
+tokens. **No arbitrary `rounded-[Npx]` anywhere.** No change needed.
+
+### hover / focus / active / disabled
+
+- **focus** was already covered globally by `@layer base :focus-visible` in
+  `globals.css` (2px ring, 2px offset) — so all 37 interactive elements are covered, not
+  just the 5 that mention `focus-visible`. No change needed.
+- **active was the real gap**: only the `default` Button variant had one. Added to all six
+  variants, to the shared `hover:bg-surface-raised hover:text-foreground` pattern (11
+  sites → `active:bg-border`), to the mobile dock (touch has no hover, so this is the only
+  press feedback a phone gets), and to 10 individually-targeted controls.
+- **disabled** was already handled at each site (`disabled:opacity-40/50`,
+  `disabled:pointer-events-none`); verified, not changed.
+
+### #18 · light-theme contrast — a finding I had previously gotten wrong
+
+I built `scripts/check-contrast.mjs` (now `npm run check:contrast`) which parses the HSL
+tokens out of `globals.css` and computes WCAG ratios. It found two genuine failures in the
+light theme:
+
+| Pair | Before | After |
+| --- | --- | --- |
+| `success` on `surface-raised` | **3.43:1** FAIL | 4.94:1 |
+| `warning` on `surface-raised` | **3.26:1** FAIL | 4.93:1 |
+
+Fixed by dropping lightness 37%→30% and 38%→30% at **unchanged hue and saturation**, so the
+colours read the same, just darker. Dark theme was already clean (worst 5.00:1).
+
+**Two bugs in my own checker, both caught before I trusted its output:**
+1. It reported identical numbers for both themes. `css.indexOf(".dark")` was matching
+   `@custom-variant dark (&:is(.dark *))` earlier in the file, so the "dark" run was
+   silently measuring `:root`. Fixed by searching for `".dark {"`.
+2. Every ratio was `NaN` — `Number("9%")` is `NaN`. Switched to `parseFloat`.
+
+If I had believed the first run I would have reported "both themes pass, worst 3.26:1" —
+plausible-looking and completely wrong.
+
+**This corrects, but does not contradict, the earlier note.** `PROJECT_NOTES.md` §Phase 6
+claimed "all 12 pairs ≥ 4.5:1 in both themes". Those 12 were the *accent and foreground*
+pairs, and every one of them does pass. The check simply never included `success` and
+`warning` — so the claim was true about what it measured and wrong to generalise from it.
+The new script covers 13 pairs per theme (26 total) and is checked in, so the next colour
+change gets measured rather than remembered.
+
+### #14 · run state leaked between workflows — FIXED (test-first)
+
+`switchWorkflow`, `deleteWorkflow` and `hydrate` all call `resetNodeIdCounter()`, so the
+next workflow's nodes legitimately reuse ids like `node-1` — but nothing cleared
+`nodeStatuses`. A node that had never run could show a previous workflow's status.
+
+Written red first: **3 failed | 1 passed** (`expected 'queued' to be undefined`,
+`expected 'running' to be 'idle'`). The one that passed asserts run *history* survives,
+because history is session-wide and must not be cleared. After wiring the already-existing
+`resetStatuses()` into those three actions: **4 passed**.
+
+`tsc` also caught two errors in my own test — I had invented a `RunResult` shape
+(`runId`, `status: "success"`) instead of reading `types/run.ts`. Real shape is
+`{ id, endedAt, edges, status: "completed", … }`.
+
+### #15 · RETRACTED — another wrong finding
+
+I claimed `beginRun` seeds only `reachableFromTriggers`, leaving unreachable nodes with
+stale statuses. Wrong: `beginRun` **replaces the whole record**
+(`nodeStatuses: Object.fromEntries(...)`), and `useNodeStatus` is
+`state.nodeStatuses[nodeId] ?? "idle"` — so an unseeded node has no entry and renders idle,
+which is correct. No code changed. **That is the second finding I have had to retract**; in
+both cases I reasoned from the call site without reading the implementation.
+
+### #11 / #12 · theme duplication and dead state — FIXED
+
+- `adoptThemeIfUnset(theme)` in `theme-provider.tsx`, called on hydration. It only acts when
+  `flowforge.theme` is absent, i.e. the browser has never expressed a preference — so an
+  imported workflow can carry a theme without ever overriding a deliberate user choice.
+- `consoleOpen` deleted from `uiStore` (grep confirmed nothing outside the store read it)
+  and `PanelId` narrowed to `"palette" | "inspector"`.
+
+### #16 / #17 · empty-state button and a real toast system — FIXED
+
+- New `store/toastStore.ts` + `components/ui/toast-viewport.tsx`, mounted once per tier.
+  The workflow menu's private toast is gone; its 8 `flash()` calls now use `pushToast()`.
+  New `z-toast: 60` step added to the scale so toasts clear dialogs and sheets.
+- Placed **top-right**, not bottom-centre: the bottom of the viewport belongs to the run
+  console on desktop and the dock on a phone, and the top bar's own blocking alert already
+  owns top-centre.
+- Empty state gained a **Browse templates** button that opens the same gallery dialog —
+  `templatesOpen` moved into `uiStore` so the canvas and the toolbar share one instance
+  instead of mounting two.
+- **One judgement call to flag:** autosave fires ~600ms after *every* edit pause, so an
+  unthrottled "Saved" toast would be constant noise. It is throttled to one confirmation
+  per 15s, and a failed save raises an error toast immediately with no throttle. Say the
+  word if you want it every time or never.
+
+### Toolbar tooltips and shortcut hints
+
+- Tooltips on Templates, Run and Stop (the Run tooltip explains *why* it is disabled when
+  the canvas is empty).
+- New `components/ui/kbd.tsx` renders `⌘ ⇧ Z` on a Mac and `Ctrl Shift Z` elsewhere, using
+  `useSyncExternalStore` with a `false` server snapshot — the same pattern that fixed the
+  theme hydration bug, so Mac users get no mismatch warning.
+- Hints added to the Undo/Redo menu items. Only shortcuts that **actually exist** in
+  `use-keyboard-shortcuts.ts` are advertised; I did not invent any.
+
+### What I could not verify
+
+Still no browser. Verified mechanically: the served HTML contains the empty-state button,
+the toast viewport, and the toolbar triggers; the compiled CSS contains `z-toast` and all
+spacing changes; contrast is computed, not eyeballed; the run-state fix has a red/green
+test. **Tooltip and `<kbd>` content do not appear in the SSR HTML** because Radix renders
+them in a portal only when open — I verified their wiring in source and that their triggers
+render, but I have not seen them open. The 106 spacing changes are 2px-each and I cannot
+confirm they look better.
 
 ## Phase 5 — Verify and show evidence
 

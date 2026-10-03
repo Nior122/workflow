@@ -53,16 +53,16 @@ function SheetContent({
         {/* Grab affordance. Purely visual; Escape and the button both close. */}
         <span
           aria-hidden
-          className="mx-auto mt-2.5 h-1 w-10 shrink-0 rounded-full bg-border"
+          className="mx-auto mt-3 h-1 w-10 shrink-0 rounded-full bg-border"
         />
 
-        <header className="flex shrink-0 items-start gap-3 px-4 pt-3 pb-2.5">
+        <header className="flex shrink-0 items-start gap-3 px-4 pt-3 pb-3">
           <div className="min-w-0 flex-1">
             <DialogPrimitive.Title className="text-sm font-semibold tracking-tight text-foreground">
               {title}
             </DialogPrimitive.Title>
             {subtitle && (
-              <DialogPrimitive.Description className="mt-0.5 text-xs text-muted-foreground">
+              <DialogPrimitive.Description className="mt-1 text-xs text-muted-foreground">
                 {subtitle}
               </DialogPrimitive.Description>
             )}
@@ -70,7 +70,7 @@ function SheetContent({
 
           <DialogPrimitive.Close
             aria-label="Close"
-            className="grid size-8 shrink-0 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-surface-raised hover:text-foreground"
+            className="grid size-8 shrink-0 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-surface-raised hover:text-foreground active:bg-border"
           >
             <X className="size-4" aria-hidden />
           </DialogPrimitive.Close>

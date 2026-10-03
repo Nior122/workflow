@@ -11,6 +11,7 @@ import { BottomPanel } from "@/components/panels/bottom-panel";
 import { FlowCanvas } from "@/components/canvas/flow-canvas";
 import { CanvasElementProvider } from "@/components/canvas/canvas-context";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { ToastViewport } from "@/components/ui/toast-viewport";
 import { useAddNodeAtCenter } from "@/hooks/use-canvas-actions";
 import { useViewportTier } from "@/hooks/use-viewport-tier";
 import { useLiveValidation } from "@/hooks/use-live-validation";
@@ -79,6 +80,7 @@ export function AppShell() {
                 <FlowCanvas minimapVisible={false} />
               </main>
               <MobileDock />
+              <ToastViewport />
             </div>
           </CanvasElementProvider>
         </ReactFlowProvider>
@@ -120,6 +122,7 @@ export function AppShell() {
             <InspectorRail />
 
             <BottomPanel />
+            <ToastViewport />
           </div>
         </CanvasElementProvider>
       </ReactFlowProvider>
@@ -240,8 +243,8 @@ function RailToggle({
       onClick={onClick}
       aria-label={label}
       className={cn(
-        "flex h-8 shrink-0 items-center justify-center gap-1.5 border-t border-border/70",
-        "text-[11px] text-muted-foreground transition-colors hover:bg-surface-raised hover:text-foreground",
+        "flex h-8 shrink-0 items-center justify-center gap-2 border-t border-border/70",
+        "text-[11px] text-muted-foreground transition-colors hover:bg-surface-raised hover:text-foreground active:bg-border",
       )}
     >
       <Icon className="size-3.5" aria-hidden />

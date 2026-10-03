@@ -184,6 +184,11 @@ original light accents measured **3.68:1** and **2.63:1** against the background
 WCAG AA failure — so they were darkened until **all twelve foreground/background pairs clear
 4.5:1 in both themes**.
 
+That audit covered the accent and foreground pairs only. A later pass added `success` and
+`warning`, found both failing in light mode (3.43:1 and 3.26:1) and darkened them the same
+way. The check is now a script — `npm run check:contrast` measures 13 pairs per theme
+straight from the tokens in `globals.css` — so a colour change is measured, not remembered.
+
 Accessibility beyond contrast: a global `:focus-visible` ring, palette items that are real
 `<button>`s (drag is an enhancement, not the only path), two labelled `true`/`false` handles
 on the filter node rather than colour alone, and `prefers-reduced-motion` handling on the

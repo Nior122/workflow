@@ -312,10 +312,10 @@ export function ConditionForm({
       )}
 
       <div className="grid grid-cols-2 gap-2 text-[11px]">
-        <p className="rounded-md border border-success/30 bg-success/10 px-2.5 py-1.5 text-success">
+        <p className="rounded-md border border-success/30 bg-success/10 px-3 py-2 text-success">
           matches → <span className="font-mono">true</span> handle
         </p>
-        <p className="rounded-md border border-error/30 bg-error/10 px-2.5 py-1.5 text-error">
+        <p className="rounded-md border border-error/30 bg-error/10 px-3 py-2 text-error">
           else → <span className="font-mono">false</span> handle
         </p>
       </div>
@@ -387,15 +387,15 @@ export function TextFormatterForm({
       </Field>
 
       {tokens.length > 0 && (
-        <div className="space-y-1.5">
+        <div className="space-y-2">
           <p className="text-[10px] font-medium tracking-wide text-muted-foreground uppercase">
             Referenced variables
           </p>
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-2">
             {[...new Set(tokens)].map((token) => (
               <code
                 key={token}
-                className="rounded border border-accent/25 bg-accent/10 px-1.5 py-0.5 font-mono text-[10px] text-accent"
+                className="rounded border border-accent/25 bg-accent/10 px-2 py-1 font-mono text-[10px] text-accent"
               >
                 {token}
               </code>

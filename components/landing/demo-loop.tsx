@@ -141,7 +141,7 @@ export function DemoLoop({ className }: { className?: string }) {
     >
       <div
         aria-hidden
-        className="flex items-center gap-1.5 border-b border-border bg-surface px-3 py-2"
+        className="flex items-center gap-2 border-b border-border bg-surface px-3 py-2"
       >
         <span className="size-2.5 rounded-full bg-error/60" />
         <span className="size-2.5 rounded-full bg-warning/60" />

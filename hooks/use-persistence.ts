@@ -7,10 +7,15 @@ import { autoLayout } from "@/lib/layout";
 import { useWorkflowStore } from "@/store/workflowStore";
 import { useRunStore } from "@/store/runStore";
 import { useUiStore } from "@/store/uiStore";
+import { pushToast } from "@/store/toastStore";
+import { adoptThemeIfUnset } from "@/components/layout/theme-provider";
 import { WORKFLOW_SCHEMA_VERSION, createWorkflow } from "@/types/workflow";
 import type { FlowEdge, FlowNode } from "@/types";
 
 const SAVE_DEBOUNCE_MS = 600;
+/** Autosave is silent except for one confirmation per this window. */
+const SAVE_TOAST_COOLDOWN_MS = 15_000;
+let lastSaveToastAt = 0;
 
 /**
  * Hydrates the stores from localStorage (or a share link) and auto-saves changes.
@@ -53,6 +58,9 @@ export function usePersistence(): void {
     const loaded = loadState();
     if (loaded.ok) {
       store.hydrate(loaded.state);
+      // Honour a theme that arrived with the saved file, unless the user has
+      // already picked one in this browser.
+      adoptThemeIfUnset(loaded.state.settings.theme);
       useUiStore.setState({
         speed: loaded.state.settings.speed,
         showMinimap: loaded.state.settings.showMinimap,
@@ -98,7 +106,20 @@ export function usePersistence(): void {
         },
       });
 
-      if (!result.ok) console.warn("FlowForge: autosave failed.", result.error);
+      if (!result.ok) {
+        console.warn("FlowForge: autosave failed.", result.error);
+        pushToast("error", "Autosave failed — export your workflow to keep it");
+        return;
+      }
+
+      // Autosave fires ~600ms after every edit pause, so an unthrottled toast
+      // would be constant noise. Confirming at most once a quarter of a minute
+      // still tells you your work is safe without nagging on every keystroke.
+      const now = Date.now();
+      if (now - lastSaveToastAt > SAVE_TOAST_COOLDOWN_MS) {
+        lastSaveToastAt = now;
+        pushToast("ok", "Saved to this browser");
+      }
     }, SAVE_DEBOUNCE_MS);
 
     return () => clearTimeout(timer);

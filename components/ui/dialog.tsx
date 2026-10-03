@@ -52,7 +52,7 @@ function DialogContent({
         {children}
         <DialogPrimitive.Close
           aria-label="Close"
-          className="absolute top-4 right-4 rounded-md p-1 text-muted-foreground transition-colors hover:bg-surface-raised hover:text-foreground"
+          className="absolute top-4 right-4 rounded-md p-1 text-muted-foreground transition-colors hover:bg-surface-raised hover:text-foreground active:bg-border"
         >
           <X className="size-4" aria-hidden />
         </DialogPrimitive.Close>
@@ -62,7 +62,7 @@ function DialogContent({
 }
 
 function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
-  return <div data-slot="dialog-header" className={cn("space-y-1.5 pr-8", className)} {...props} />;
+  return <div data-slot="dialog-header" className={cn("space-y-2 pr-8", className)} {...props} />;
 }
 
 function DialogFooter({ className, ...props }: React.ComponentProps<"div">) {

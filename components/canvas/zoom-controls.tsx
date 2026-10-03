@@ -50,7 +50,7 @@ export function ZoomControls({ className }: { className?: string }) {
       role="group"
       aria-label="Canvas zoom controls"
       className={cn(
-        "flex items-center gap-0.5 rounded-lg border border-border bg-surface/95 p-1 shadow-lg backdrop-blur",
+        "flex items-center gap-1 rounded-lg border border-border bg-surface/95 p-1 shadow-lg backdrop-blur",
         className,
       )}
     >
@@ -61,7 +61,7 @@ export function ZoomControls({ className }: { className?: string }) {
               type="button"
               onClick={action}
               aria-label={label}
-              className="grid size-7 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-surface-raised hover:text-foreground"
+              className="grid size-7 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-surface-raised hover:text-foreground active:bg-border"
             >
               <Icon className="size-3.5" aria-hidden />
             </button>
@@ -77,7 +77,7 @@ export function ZoomControls({ className }: { className?: string }) {
         {zoomLabel}
       </span>
 
-      <span aria-hidden className="mx-0.5 h-4 w-px bg-border" />
+      <span aria-hidden className="mx-1 h-4 w-px bg-border" />
 
       <Tooltip>
         <TooltipTrigger asChild>
@@ -86,7 +86,7 @@ export function ZoomControls({ className }: { className?: string }) {
             onClick={handleAutoLayout}
             disabled={!canLayout}
             aria-label="Auto-layout, left to right"
-            className="grid size-7 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-surface-raised hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
+            className="grid size-7 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-surface-raised hover:text-foreground active:bg-border disabled:pointer-events-none disabled:opacity-40"
           >
             <LayoutGrid className="size-3.5" aria-hidden />
           </button>
@@ -100,7 +100,7 @@ export function ZoomControls({ className }: { className?: string }) {
             type="button"
             onClick={() => fitView({ duration: 280, padding: 0.2 })}
             aria-label="Fit flow to view"
-            className="grid size-7 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-surface-raised hover:text-foreground"
+            className="grid size-7 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-surface-raised hover:text-foreground active:bg-border"
           >
             <Maximize className="size-3.5" aria-hidden />
           </button>

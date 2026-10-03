@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef } from "react";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import {
   Check,
@@ -20,12 +20,12 @@ import { buildShareUrl } from "@/lib/utils/share";
 import { useWorkflowStore } from "@/store/workflowStore";
 import { useRunStore } from "@/store/runStore";
 import { useUiStore } from "@/store/uiStore";
+import { pushToast } from "@/store/toastStore";
+import { Kbd } from "@/components/ui/kbd";
 import { EXECUTION_SPEEDS } from "@/config/constants";
 import type { ExecutionSpeed } from "@/types/run";
 import { isWorkflow, type Workflow } from "@/types/workflow";
 import type { FlowEdge, FlowNode } from "@/types";
-
-type Toast = { tone: "ok" | "error"; message: string } | null;
 
 /**
  * Workflow actions: new, templates, import/export, share link, undo/redo and
@@ -36,7 +36,6 @@ type Toast = { tone: "ok" | "error"; message: string } | null;
  */
 export function WorkflowMenu({ onOpenTemplates }: { onOpenTemplates: () => void }) {
   const fileInput = useRef<HTMLInputElement | null>(null);
-  const [toast, setToast] = useState<Toast>(null);
 
   const nodes = useWorkflowStore((state) => state.nodes);
   const edges = useWorkflowStore((state) => state.edges);
@@ -56,11 +55,6 @@ export function WorkflowMenu({ onOpenTemplates }: { onOpenTemplates: () => void 
   const isRunning = useUiStore((state) => state.isRunning);
   const speed = useUiStore((state) => state.speed);
   const setSpeed = useUiStore((state) => state.setSpeed);
-
-  const flash = (next: Toast) => {
-    setToast(next);
-    window.setTimeout(() => setToast(null), 3200);
-  };
 
   const handleExport = () => {
     const workflow: Workflow = {
@@ -84,7 +78,7 @@ export function WorkflowMenu({ onOpenTemplates }: { onOpenTemplates: () => void 
     anchor.click();
     URL.revokeObjectURL(url);
 
-    flash({ tone: "ok", message: "Workflow exported as JSON" });
+    pushToast("ok", "Workflow exported as JSON");
   };
 
   const handleImportFile = async (file: File) => {
@@ -92,7 +86,7 @@ export function WorkflowMenu({ onOpenTemplates }: { onOpenTemplates: () => void 
     try {
       parsed = JSON.parse(await file.text());
     } catch {
-      flash({ tone: "error", message: "That file is not valid JSON" });
+      pushToast("error", "That file is not valid JSON");
       return;
     }
 
@@ -116,18 +110,18 @@ export function WorkflowMenu({ onOpenTemplates }: { onOpenTemplates: () => void 
     }
 
     if (!graphNodes || !graphEdges) {
-      flash({ tone: "error", message: "No nodes or connections found in that file" });
+      pushToast("error", "No nodes or connections found in that file");
       return;
     }
 
     replaceGraph(graphNodes, graphEdges, name);
     resetStatuses();
-    flash({ tone: "ok", message: `Imported ${graphNodes.length} nodes` });
+    pushToast("ok", `Imported ${graphNodes.length} nodes`);
   };
 
   const handleShare = async () => {
     if (nodes.length === 0) {
-      flash({ tone: "error", message: "Add some nodes before sharing" });
+      pushToast("error", "Add some nodes before sharing");
       return;
     }
 
@@ -135,14 +129,14 @@ export function WorkflowMenu({ onOpenTemplates }: { onOpenTemplates: () => void 
 
     try {
       await navigator.clipboard.writeText(url);
-      flash({
-        tone: "ok",
-        message: tooLong
+      pushToast(
+        "ok",
+        tooLong
           ? `Copied — but ${url.length} chars may be truncated by some apps`
           : "Share link copied to clipboard",
-      });
+      );
     } catch {
-      flash({ tone: "error", message: "Clipboard blocked — copy the URL manually" });
+      pushToast("error", "Clipboard blocked — copy the URL manually");
       window.location.hash = url.slice(url.indexOf("#"));
     }
   };
@@ -151,11 +145,11 @@ export function WorkflowMenu({ onOpenTemplates }: { onOpenTemplates: () => void 
     if (nodes.length === 0) return;
     const result = autoLayout(nodes, edges);
     replaceGraph(result.nodes, edges);
-    flash({ tone: "ok", message: "Arranged left to right" });
+    pushToast("ok", "Arranged left to right");
   };
 
   const itemClass = cn(
-    "flex w-full cursor-pointer items-center gap-2.5 rounded-md px-2.5 py-1.5 text-xs",
+    "flex w-full cursor-pointer items-center gap-3 rounded-md px-3 py-2 text-xs",
     "text-foreground outline-none transition-colors",
     "data-[highlighted]:bg-surface-raised data-[disabled]:pointer-events-none data-[disabled]:opacity-40",
   );
@@ -168,7 +162,7 @@ export function WorkflowMenu({ onOpenTemplates }: { onOpenTemplates: () => void 
             type="button"
             disabled={isRunning}
             aria-label="Workflow actions"
-            className="grid size-9 place-items-center rounded-md border border-border bg-surface-raised text-muted-foreground transition-colors hover:border-accent/50 hover:text-foreground disabled:opacity-50"
+            className="grid size-9 place-items-center rounded-md border border-border bg-surface-raised text-muted-foreground transition-colors hover:border-accent/50 hover:text-foreground active:bg-border disabled:opacity-50"
           >
             <LayoutGrid className="size-4" aria-hidden />
           </button>
@@ -178,7 +172,7 @@ export function WorkflowMenu({ onOpenTemplates }: { onOpenTemplates: () => void 
           <DropdownMenu.Content
             align="end"
             sideOffset={6}
-            className="z-overlay w-56 rounded-lg border border-border bg-surface p-1.5 shadow-xl"
+            className="z-overlay w-56 rounded-lg border border-border bg-surface p-2 shadow-xl"
           >
             <DropdownMenu.Item className={itemClass} onSelect={() => createNewWorkflow()}>
               <FilePlus2 className="size-3.5 text-muted-foreground" aria-hidden />
@@ -192,8 +186,8 @@ export function WorkflowMenu({ onOpenTemplates }: { onOpenTemplates: () => void 
 
             {workflows.length > 1 && (
               <>
-                <DropdownMenu.Separator className="my-1.5 h-px bg-border" />
-                <DropdownMenu.Label className="px-2.5 pt-1 pb-1 text-[10px] font-semibold tracking-[0.08em] text-muted-foreground uppercase">
+                <DropdownMenu.Separator className="my-2 h-px bg-border" />
+                <DropdownMenu.Label className="px-3 pt-1 pb-1 text-[10px] font-semibold tracking-[0.08em] text-muted-foreground uppercase">
                   Switch to
                 </DropdownMenu.Label>
                 {workflows.map((workflow) => (
@@ -218,7 +212,7 @@ export function WorkflowMenu({ onOpenTemplates }: { onOpenTemplates: () => void 
               </>
             )}
 
-            <DropdownMenu.Separator className="my-1.5 h-px bg-border" />
+            <DropdownMenu.Separator className="my-2 h-px bg-border" />
 
             <DropdownMenu.Item className={itemClass} onSelect={handleAutoLayout} disabled={nodes.length === 0}>
               <LayoutGrid className="size-3.5 text-muted-foreground" aria-hidden />
@@ -228,21 +222,23 @@ export function WorkflowMenu({ onOpenTemplates }: { onOpenTemplates: () => void 
             <DropdownMenu.Item className={itemClass} onSelect={undo} disabled={!canUndo}>
               <Undo2 className="size-3.5 text-muted-foreground" aria-hidden />
               Undo
+              <Kbd mod keys={["Z"]} className="ml-auto" />
               <span className="ml-auto font-mono text-[10px] text-muted-foreground">⌘Z</span>
             </DropdownMenu.Item>
 
             <DropdownMenu.Item className={itemClass} onSelect={redo} disabled={!canRedo}>
               <Redo2 className="size-3.5 text-muted-foreground" aria-hidden />
               Redo
+              <Kbd mod keys={["⇧", "Z"]} className="ml-auto" />
               <span className="ml-auto font-mono text-[10px] text-muted-foreground">⇧⌘Z</span>
             </DropdownMenu.Item>
 
-            <DropdownMenu.Separator className="my-1.5 h-px bg-border sm:hidden" />
+            <DropdownMenu.Separator className="my-2 h-px bg-border sm:hidden" />
 
             {/* Narrow viewports hide the inline speed control, so it lives here.
                 The two never render at the same width. */}
             <div className="sm:hidden">
-              <DropdownMenu.Label className="px-2.5 pt-1 pb-1 text-[10px] font-semibold tracking-[0.08em] text-muted-foreground uppercase">
+              <DropdownMenu.Label className="px-3 pt-1 pb-1 text-[10px] font-semibold tracking-[0.08em] text-muted-foreground uppercase">
                 Execution speed
               </DropdownMenu.Label>
               {EXECUTION_SPEEDS.map((option) => (
@@ -264,7 +260,7 @@ export function WorkflowMenu({ onOpenTemplates }: { onOpenTemplates: () => void 
               ))}
             </div>
 
-            <DropdownMenu.Separator className="my-1.5 h-px bg-border" />
+            <DropdownMenu.Separator className="my-2 h-px bg-border" />
 
             <DropdownMenu.Item
               className={cn(itemClass, "text-error data-[highlighted]:text-error")}
@@ -275,7 +271,7 @@ export function WorkflowMenu({ onOpenTemplates }: { onOpenTemplates: () => void 
               Clear canvas
             </DropdownMenu.Item>
 
-            <DropdownMenu.Separator className="my-1.5 h-px bg-border" />
+            <DropdownMenu.Separator className="my-2 h-px bg-border" />
 
             <DropdownMenu.Item
               className={itemClass}
@@ -311,26 +307,6 @@ export function WorkflowMenu({ onOpenTemplates }: { onOpenTemplates: () => void 
         }}
       />
 
-      {toast && (
-        <div
-          role="status"
-          className={cn(
-            "absolute top-full right-0 z-menu mt-2 flex w-64 items-start gap-2 rounded-lg border px-3 py-2 shadow-lg",
-            toast.tone === "ok"
-              ? "border-success/40 bg-surface-raised"
-              : "border-error/40 bg-surface-raised",
-          )}
-        >
-          <Check
-            className={cn(
-              "mt-px size-3.5 shrink-0",
-              toast.tone === "ok" ? "text-success" : "text-error",
-            )}
-            aria-hidden
-          />
-          <span className="text-xs text-foreground">{toast.message}</span>
-        </div>
-      )}
     </div>
   );
 }

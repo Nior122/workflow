@@ -49,8 +49,8 @@ export function FeatureGrid() {
                 <Icon className="size-4" aria-hidden strokeWidth={2.2} />
               </span>
 
-              <h3 className="mt-3.5 text-sm font-semibold text-foreground">{title}</h3>
-              <p className="mt-1.5 text-sm leading-relaxed text-pretty text-muted-foreground">
+              <h3 className="mt-4 text-sm font-semibold text-foreground">{title}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-pretty text-muted-foreground">
                 {body}
               </p>
             </li>

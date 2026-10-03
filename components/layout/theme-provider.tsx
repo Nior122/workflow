@@ -89,6 +89,24 @@ export function useTheme(): ThemeContextValue {
   return context;
 }
 
+/**
+ * Adopt a theme that came from persisted workflow settings, but only if this
+ * browser has never expressed a preference of its own.
+ *
+ * `settings.theme` travels inside the exported/imported workflow JSON, so it is
+ * the only channel by which a file can carry a theme. Without this it was
+ * written on every autosave and never read back — and importing a light-theme
+ * workflow into a dark browser silently did nothing.
+ */
+export function adoptThemeIfUnset(theme: Theme): void {
+  try {
+    if (localStorage.getItem(THEME_STORAGE_KEY) !== null) return;
+  } catch {
+    return;
+  }
+  writeTheme(theme);
+}
+
 /** Inline bootstrap that sets the theme class before first paint. */
 export const THEME_INIT_SCRIPT = `(function(){try{var t=localStorage.getItem(${JSON.stringify(
   THEME_STORAGE_KEY,

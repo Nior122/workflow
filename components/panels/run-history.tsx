@@ -37,7 +37,7 @@ export function RunHistory() {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex items-center justify-between border-b border-border/60 px-4 py-1.5">
+      <div className="flex items-center justify-between border-b border-border/60 px-4 py-2">
         <span className="font-mono text-[10px] text-muted-foreground">
           {history.length} run{history.length === 1 ? "" : "s"} kept
         </span>
@@ -71,7 +71,7 @@ export function RunHistory() {
                     {run.workflowName}
                   </span>
                 </p>
-                <p className="mt-0.5 font-mono text-[10px] text-muted-foreground">
+                <p className="mt-1 font-mono text-[10px] text-muted-foreground">
                   {succeeded} ok{skipped > 0 ? ` · ${skipped} skipped` : ""} ·{" "}
                   {new Date(run.startedAt).toLocaleTimeString([], { hour12: false })}
                 </p>
@@ -79,7 +79,7 @@ export function RunHistory() {
 
               <span
                 className={cn(
-                  "shrink-0 rounded-full border px-2 py-0.5 font-mono text-[10px]",
+                  "shrink-0 rounded-full border px-2 py-1 font-mono text-[10px]",
                   meta.className,
                   run.status === "completed"
                     ? "border-success/35 bg-success/10"

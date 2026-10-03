@@ -82,10 +82,10 @@ export function Palette({
         className,
       )}
     >
-      <div className="shrink-0 border-b border-border/70 px-3 py-2.5">
+      <div className="shrink-0 border-b border-border/70 px-3 py-3">
         <label className="relative flex items-center">
           <Search
-            className="pointer-events-none absolute left-2.5 size-3.5 text-muted-foreground"
+            className="pointer-events-none absolute left-3 size-3.5 text-muted-foreground"
             aria-hidden
           />
           <span className="sr-only">Filter nodes</span>
@@ -95,7 +95,7 @@ export function Palette({
             onChange={(event) => setQuery(event.target.value)}
             placeholder={`Search ${total} nodes`}
             className={cn(
-              "h-8 w-full rounded-md border border-border bg-surface-raised pr-2.5 pl-8",
+              "h-8 w-full rounded-md border border-border bg-surface-raised pr-3 pl-8",
               "text-xs text-foreground placeholder:text-muted-foreground",
               "focus:border-accent focus:outline-none",
               "[&::-webkit-search-cancel-button]:appearance-none",
@@ -167,7 +167,7 @@ function PaletteItem({
       onClick={() => onAdd(def.type)}
       aria-label={`Add ${def.title} node`}
       className={cn(
-        "group flex w-full cursor-grab items-center gap-2.5 rounded-md px-2 py-2 text-left",
+        "group flex w-full cursor-grab items-center gap-3 rounded-md px-2 py-2 text-left",
         "transition-colors hover:bg-surface-raised active:cursor-grabbing",
         "disabled:cursor-not-allowed disabled:opacity-50",
       )}
@@ -184,7 +184,7 @@ function PaletteItem({
         <span className="block truncate text-[13px] leading-tight font-medium text-foreground">
           {def.title}
         </span>
-        <span className="mt-0.5 block truncate text-[11px] leading-tight text-muted-foreground">
+        <span className="mt-1 block truncate text-[11px] leading-tight text-muted-foreground">
           {def.description}
         </span>
       </span>

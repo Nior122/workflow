@@ -83,7 +83,7 @@ function InspectorBody({ node }: { node: FlowNode }) {
   return (
     <>
       <header className="shrink-0 border-b border-border px-4 py-3">
-        <div className="flex items-start gap-2.5">
+        <div className="flex items-start gap-3">
           <span
             aria-hidden
             className="grid size-9 shrink-0 place-items-center rounded-md border"
@@ -102,9 +102,9 @@ function InspectorBody({ node }: { node: FlowNode }) {
               disabled={isRunning}
               aria-label="Node name"
               onChange={(event) => renameNode(node.id, event.target.value)}
-              className="w-full truncate rounded-md border border-transparent bg-transparent px-1 py-0.5 text-sm font-semibold text-foreground transition-colors hover:border-border focus:border-accent focus:outline-none"
+              className="w-full truncate rounded-md border border-transparent bg-transparent px-1 py-1 text-sm font-semibold text-foreground transition-colors hover:border-border focus:border-accent focus:outline-none"
             />
-            <p className="mt-0.5 px-1 text-[11px] tracking-wide text-muted-foreground uppercase">
+            <p className="mt-1 px-1 text-[11px] tracking-wide text-muted-foreground uppercase">
               {CATEGORY_LABEL[ui.category]} · {def.title}
             </p>
           </div>
@@ -114,20 +114,20 @@ function InspectorBody({ node }: { node: FlowNode }) {
             onClick={deleteSelection}
             disabled={isRunning}
             aria-label="Delete this node"
-            className="grid size-7 shrink-0 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-error/15 hover:text-error disabled:opacity-40"
+            className="grid size-7 shrink-0 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-error/15 hover:text-error active:bg-error/25 disabled:opacity-40"
           >
             <Trash2 className="size-3.5" aria-hidden />
           </button>
         </div>
 
-        <p className="mt-2.5 text-[11px] leading-relaxed text-muted-foreground">
+        <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground">
           {def.description}
         </p>
 
         {errorCount > 0 && (
           <p
             role="alert"
-            className="mt-2.5 flex items-start gap-1.5 rounded-md border border-error/35 bg-error/10 px-2.5 py-1.5 text-[11px] text-error"
+            className="mt-3 flex items-start gap-2 rounded-md border border-error/35 bg-error/10 px-3 py-2 text-[11px] text-error"
           >
             <AlertTriangle className="mt-px size-3 shrink-0" aria-hidden />
             {errorCount === 1
@@ -149,7 +149,7 @@ function InspectorBody({ node }: { node: FlowNode }) {
       <footer className="shrink-0 space-y-3 border-t border-border px-4 py-3">
         <label
           className={cn(
-            "flex cursor-pointer items-start gap-2.5 rounded-md border border-border px-3 py-2.5 transition-colors",
+            "flex cursor-pointer items-start gap-3 rounded-md border border-border px-3 py-3 transition-colors",
             node.data.simulateFailure
               ? "border-error/50 bg-error/10"
               : "hover:border-error/40",
@@ -163,13 +163,13 @@ function InspectorBody({ node }: { node: FlowNode }) {
             onChange={(event) =>
               updateNodeData(node.id, { simulateFailure: event.target.checked })
             }
-            className="mt-0.5 size-4 cursor-pointer rounded border-border accent-[hsl(var(--error))]"
+            className="mt-1 size-4 cursor-pointer rounded border-border accent-[hsl(var(--error))]"
           />
           <span className="min-w-0">
             <span className="block text-xs font-medium text-foreground">
               Simulate failure
             </span>
-            <span className="mt-0.5 block text-[11px] leading-snug text-muted-foreground">
+            <span className="mt-1 block text-[11px] leading-snug text-muted-foreground">
               Forces this node to throw on the next run, to demo error handling.
             </span>
           </span>
@@ -206,7 +206,7 @@ function EmptyInspector() {
         <MousePointerClick className="size-4" aria-hidden />
       </span>
       <p className="mt-3 text-sm font-medium text-foreground">No node selected</p>
-      <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
+      <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
         Click a node on the canvas to rename it and edit its configuration.
       </p>
     </motion.div>

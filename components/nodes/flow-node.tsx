@@ -42,13 +42,13 @@ export function createNodeComponent(type: NodeType) {
         errors={errors}
         status={status}
         summary={
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             <p className="truncate font-mono text-[11px] text-muted-foreground">
               {summarizeConfig(type, data.config)}
             </p>
 
             {data.simulateFailure && (
-              <p className="inline-flex items-center gap-1 rounded border border-error/35 bg-error/10 px-1.5 py-0.5 font-mono text-[10px] text-error">
+              <p className="inline-flex items-center gap-1 rounded border border-error/35 bg-error/10 px-2 py-1 font-mono text-[10px] text-error">
                 <AlertTriangle className="size-2.5" aria-hidden />
                 failure forced
               </p>

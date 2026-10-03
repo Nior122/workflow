@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { createKeyValuePair, type KeyValuePair } from "@/types/nodes";
 
 const controlClass =
-  "w-full rounded-md border border-border bg-surface px-2.5 py-1.5 text-sm text-foreground " +
+  "w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-foreground " +
   "placeholder:text-muted-foreground/60 transition-colors " +
   "hover:border-border focus:border-accent focus:outline-none disabled:opacity-60";
 
@@ -25,7 +25,7 @@ export function Field({
   htmlFor?: string;
 }) {
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-2">
       <label
         htmlFor={htmlFor}
         className="flex items-baseline justify-between gap-2 text-xs font-medium text-foreground"
@@ -185,7 +185,7 @@ export function NumberInput({
         className={cn(controlClass, "font-mono text-xs tabular-nums", suffix && "pr-12")}
       />
       {suffix && (
-        <span className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 font-mono text-[11px] text-muted-foreground">
+        <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 font-mono text-[11px] text-muted-foreground">
           {suffix}
         </span>
       )}
@@ -246,7 +246,7 @@ export function Checkbox({
   return (
     <label
       htmlFor={id}
-      className="flex cursor-pointer items-center gap-2.5 text-xs text-foreground select-none"
+      className="flex cursor-pointer items-center gap-3 text-xs text-foreground select-none"
     >
       <input
         id={id}
@@ -287,20 +287,20 @@ export function KeyValueEditor({
 
   return (
     <div className="space-y-2">
-      <div className="grid grid-cols-[1fr_1.2fr_auto] gap-1.5 text-[10px] font-medium tracking-wide text-muted-foreground uppercase">
+      <div className="grid grid-cols-[1fr_1.2fr_auto] gap-2 text-[10px] font-medium tracking-wide text-muted-foreground uppercase">
         <span>{keyLabel}</span>
         <span>{valueLabel}</span>
         <span className="sr-only">Remove</span>
       </div>
 
       {rows.length === 0 && (
-        <p className="rounded-md border border-dashed border-border px-2.5 py-2 text-[11px] text-muted-foreground">
+        <p className="rounded-md border border-dashed border-border px-3 py-2 text-[11px] text-muted-foreground">
           {emptyMessage}
         </p>
       )}
 
       {rows.map((row) => (
-        <div key={row.id} className="grid grid-cols-[1fr_1.2fr_auto] items-center gap-1.5">
+        <div key={row.id} className="grid grid-cols-[1fr_1.2fr_auto] items-center gap-2">
           <input
             type="text"
             value={row.key}
@@ -324,7 +324,7 @@ export function KeyValueEditor({
             disabled={disabled}
             onClick={() => onChange(rows.filter((entry) => entry.id !== row.id))}
             aria-label={`Remove ${row.key || "row"}`}
-            className="grid size-7 shrink-0 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-error/15 hover:text-error disabled:opacity-40"
+            className="grid size-7 shrink-0 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-error/15 hover:text-error active:bg-error/25 disabled:opacity-40"
           >
             <Trash2 className="size-3.5" aria-hidden />
           </button>
@@ -335,7 +335,7 @@ export function KeyValueEditor({
         type="button"
         disabled={disabled}
         onClick={() => onChange([...rows, createKeyValuePair()])}
-        className="inline-flex items-center gap-1.5 rounded-md border border-dashed border-border px-2.5 py-1.5 text-[11px] text-muted-foreground transition-colors hover:border-accent/50 hover:text-accent disabled:opacity-40"
+        className="inline-flex items-center gap-2 rounded-md border border-dashed border-border px-3 py-2 text-[11px] text-muted-foreground transition-colors hover:border-accent/50 hover:text-accent disabled:opacity-40"
       >
         <Plus className="size-3" aria-hidden />
         Add {keyLabel.toLowerCase()}

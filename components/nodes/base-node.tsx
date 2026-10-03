@@ -129,7 +129,7 @@ function BaseNodeInner({
           <TooltipContent className="max-w-64 border-error/40">
             <ul className="space-y-1">
               {errors.map((issue) => (
-                <li key={`${issue.code}-${issue.message}`} className="flex gap-1.5">
+                <li key={`${issue.code}-${issue.message}`} className="flex gap-2">
                   <span aria-hidden className="text-error">
                     &bull;
                   </span>
@@ -141,7 +141,7 @@ function BaseNodeInner({
         </Tooltip>
       )}
 
-      <header className="flex items-center gap-2.5 px-3 py-2.5">
+      <header className="flex items-center gap-3 px-3 py-3">
         {/* Tinted, borderless: the accent colour already carries the category, so a
             bordered tile plus an uppercase label was saying the same thing twice. */}
         <span
@@ -159,7 +159,7 @@ function BaseNodeInner({
           <h3 className="truncate text-[13px] leading-tight font-semibold text-foreground">
             {label}
           </h3>
-          <p className="mt-0.5 truncate text-[11px] leading-tight text-muted-foreground">
+          <p className="mt-1 truncate text-[11px] leading-tight text-muted-foreground">
             {CATEGORY_LABEL[category]}
           </p>
         </div>

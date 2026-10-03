@@ -1,8 +1,10 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { MousePointerClick, Workflow } from "lucide-react";
+import { LayoutTemplate, MousePointerClick, Workflow } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { useViewportTier } from "@/hooks/use-viewport-tier";
+import { useUiStore } from "@/store/uiStore";
 
 /**
  * Empty state — the canvas should never be a blank rectangle.
@@ -13,6 +15,7 @@ import { useViewportTier } from "@/hooks/use-viewport-tier";
 export function EmptyCanvas() {
   const tier = useViewportTier();
   const compact = tier === "compact";
+  const setTemplatesOpen = useUiStore((state) => state.setTemplatesOpen);
 
   return (
     <motion.div
@@ -28,16 +31,27 @@ export function EmptyCanvas() {
 
         <h2 className="mt-4 text-base font-semibold text-foreground">Start with a trigger</h2>
 
-        <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
           {compact
             ? "Tap Nodes below to add your first node, then pull from its right edge to the next node’s left edge to connect them."
             : "Drag a node from the palette on the left, then pull from its right edge to the next node’s left edge to connect them."}
         </p>
 
-        <p className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-border bg-surface-raised px-3 py-1 font-mono text-[11px] text-muted-foreground">
+        <p className="mt-4 inline-flex items-center gap-2 rounded-full border border-border bg-surface-raised px-3 py-1 font-mono text-[11px] text-muted-foreground">
           <MousePointerClick className="size-3" aria-hidden />
-          {compact ? "or load a template from the menu" : "keyboard: Enter adds the focused node"}
+          {compact ? "or start from a template" : "keyboard: Enter adds the focused node"}
         </p>
+
+        {/* Only this button re-enables pointer events. The surrounding card stays
+            click-through so dragging over it still pans the canvas. */}
+        <Button
+          size="sm"
+          className="pointer-events-auto mt-5 w-full"
+          onClick={() => setTemplatesOpen(true)}
+        >
+          <LayoutTemplate aria-hidden />
+          Browse templates
+        </Button>
       </div>
     </motion.div>
   );

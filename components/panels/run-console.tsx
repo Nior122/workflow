@@ -73,7 +73,7 @@ export function RunConsole() {
           </span>
         )}
 
-        <div className="ml-auto flex items-center gap-1.5">
+        <div className="ml-auto flex items-center gap-2">
           {expanded.length > 0 && (
             <Button variant="ghost" size="sm" onClick={collapseAll}>
               Collapse
@@ -117,7 +117,7 @@ function RunStatusBadge({ status }: { status: string }) {
   return (
     <span
       role="status"
-      className={cn("rounded-full border px-2 py-0.5 font-mono text-[10px]", tone)}
+      className={cn("rounded-full border px-2 py-1 font-mono text-[10px]", tone)}
     >
       {status}
     </span>
@@ -171,7 +171,7 @@ function StepRow({
         type="button"
         onClick={onToggle}
         aria-expanded={expanded}
-        className="flex w-full items-center gap-2.5 px-4 py-2 text-left transition-colors hover:bg-surface-raised"
+        className="flex w-full items-center gap-3 px-4 py-2 text-left transition-colors hover:bg-surface-raised active:bg-border"
       >
         <ChevronRight
           className={cn(
@@ -196,7 +196,7 @@ function StepRow({
         {step.meta?.matched !== undefined && (
           <span
             className={cn(
-              "rounded-full border px-1.5 py-0.5 font-mono text-[10px]",
+              "rounded-full border px-2 py-1 font-mono text-[10px]",
               step.meta.matched
                 ? "border-success/35 bg-success/10 text-success"
                 : "border-error/35 bg-error/10 text-error",
@@ -265,7 +265,7 @@ function JsonBlock({ label, value }: { label: string; value: JsonValue }) {
 
   return (
     <div>
-      <div className="mb-1.5 flex items-center justify-between">
+      <div className="mb-2 flex items-center justify-between">
         <span className="text-[10px] font-medium tracking-wide text-muted-foreground uppercase">
           {label}
         </span>
@@ -276,7 +276,7 @@ function JsonBlock({ label, value }: { label: string; value: JsonValue }) {
             setCopied(true);
             setTimeout(() => setCopied(false), 1200);
           }}
-          className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground transition-colors hover:text-foreground"
+          className="inline-flex items-center gap-1 rounded px-2 py-1 font-mono text-[10px] text-muted-foreground transition-colors hover:text-foreground active:bg-border"
           aria-label={`Copy ${label.toLowerCase()} JSON`}
         >
           <Copy className="size-2.5" aria-hidden />

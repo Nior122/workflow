@@ -18,7 +18,7 @@ export function ThemeToggle() {
           role="switch"
           aria-checked={isDark}
           aria-label={`Switch to ${isDark ? "light" : "dark"} theme`}
-          className="relative grid size-9 place-items-center overflow-hidden rounded-md border border-border bg-surface-raised text-muted-foreground transition-colors hover:border-accent/50 hover:text-foreground"
+          className="relative grid size-9 place-items-center overflow-hidden rounded-md border border-border bg-surface-raised text-muted-foreground transition-colors hover:border-accent/50 hover:text-foreground active:bg-border"
         >
           <AnimatePresence mode="wait" initial={false}>
             <motion.span

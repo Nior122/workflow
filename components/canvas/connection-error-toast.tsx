@@ -28,7 +28,7 @@ export function ConnectionErrorToast() {
           transition={{ type: "spring", stiffness: 400, damping: 28 }}
           className={cn(
             "pointer-events-auto absolute flex items-center gap-2 rounded-lg border",
-            "border-error/40 bg-surface-raised px-3.5 py-2 shadow-lg",
+            "border-error/40 bg-surface-raised px-4 py-2 shadow-lg",
             // Compact: centred, lifted clear of the dock.
             // Wide: pinned to the left edge one step ABOVE the zoom controls
             // instead of centred at the same height. Centring it put it in the
@@ -46,7 +46,7 @@ export function ConnectionErrorToast() {
             type="button"
             onClick={dismiss}
             aria-label="Dismiss"
-            className="rounded p-0.5 text-muted-foreground transition-colors hover:text-foreground"
+            className="rounded p-1 text-muted-foreground transition-colors hover:text-foreground active:bg-border"
           >
             <X className="size-3.5" aria-hidden />
           </button>

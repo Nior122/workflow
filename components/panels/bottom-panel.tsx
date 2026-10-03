@@ -53,7 +53,7 @@ export function RunPanelContent({
                 onExpand?.();
               }}
               className={cn(
-                "relative rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
+                "relative rounded-md px-3 py-1 text-xs font-medium transition-colors",
                 tab === entry.id && !collapsed
                   ? "text-foreground"
                   : "text-muted-foreground hover:text-foreground",
@@ -61,7 +61,7 @@ export function RunPanelContent({
             >
               {entry.label}
               {entry.badge !== undefined && entry.badge > 0 && (
-                <span className="ml-1.5 rounded-full bg-surface-raised px-1.5 py-0.5 font-mono text-[9px] text-muted-foreground tabular-nums">
+                <span className="ml-2 rounded-full bg-surface-raised px-2 py-1 font-mono text-[9px] text-muted-foreground tabular-nums">
                   {entry.badge}
                 </span>
               )}
@@ -73,7 +73,7 @@ export function RunPanelContent({
         </div>
 
         {status === "running" && (
-          <span className="ml-2 flex items-center gap-1.5 font-mono text-[10px] text-accent">
+          <span className="ml-2 flex items-center gap-2 font-mono text-[10px] text-accent">
             <span className="size-1.5 animate-pulse rounded-full bg-accent" aria-hidden />
             running
           </span>
@@ -85,7 +85,7 @@ export function RunPanelContent({
             onClick={onToggleCollapsed}
             aria-expanded={!collapsed}
             aria-label={collapsed ? "Expand run console" : "Collapse run console"}
-            className="ml-auto rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-surface-raised hover:text-foreground"
+            className="ml-auto rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-surface-raised hover:text-foreground active:bg-border"
           >
             {collapsed ? "Show" : "Hide"}
           </button>

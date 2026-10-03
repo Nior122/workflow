@@ -2,14 +2,23 @@ import { create } from "zustand";
 import type { ExecutionSpeed } from "@/types/run";
 import { DEFAULT_SPEED } from "@/config/constants";
 
-export type PanelId = "palette" | "inspector" | "console";
+/**
+ * Docked panels the shell can collapse.
+ *
+ * The run console is deliberately absent: its open/collapsed state is local to
+ * `BottomPanel` because it also owns the drag-resize height, and no other
+ * component ever needed to read it. A `consoleOpen` flag used to live here and
+ * nothing consumed it.
+ */
+export type PanelId = "palette" | "inspector";
 
 export type HydrationState = "loading" | "ready" | "unavailable";
 
 type UiState = {
   paletteOpen: boolean;
   inspectorOpen: boolean;
-  consoleOpen: boolean;
+  /** Template gallery dialog. Shared so the canvas empty state can open it. */
+  templatesOpen: boolean;
   showMinimap: boolean;
   speed: ExecutionSpeed;
   /** True while a run is in flight; the Run button and palette lock during it. */
@@ -19,6 +28,7 @@ type UiState = {
 
   togglePanel: (panel: PanelId) => void;
   setPanel: (panel: PanelId, open: boolean) => void;
+  setTemplatesOpen: (open: boolean) => void;
   setShowMinimap: (show: boolean) => void;
   setSpeed: (speed: ExecutionSpeed) => void;
   setIsRunning: (running: boolean) => void;
@@ -32,7 +42,7 @@ type UiState = {
 export const useUiStore = create<UiState>((set) => ({
   paletteOpen: true,
   inspectorOpen: true,
-  consoleOpen: true,
+  templatesOpen: false,
   showMinimap: true,
   speed: DEFAULT_SPEED,
   isRunning: false,
@@ -45,8 +55,6 @@ export const useUiStore = create<UiState>((set) => ({
           return { paletteOpen: !state.paletteOpen };
         case "inspector":
           return { inspectorOpen: !state.inspectorOpen };
-        case "console":
-          return { consoleOpen: !state.consoleOpen };
       }
     }),
 
@@ -57,11 +65,10 @@ export const useUiStore = create<UiState>((set) => ({
           return { paletteOpen: open };
         case "inspector":
           return { inspectorOpen: open };
-        case "console":
-          return { consoleOpen: open };
       }
     }),
 
+  setTemplatesOpen: (templatesOpen) => set({ templatesOpen }),
   setShowMinimap: (showMinimap) => set({ showMinimap }),
   setSpeed: (speed) => set({ speed }),
   setIsRunning: (isRunning) => set({ isRunning }),
