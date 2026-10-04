@@ -1327,3 +1327,23 @@ Rules that came out of it:
   and check for `200 text/css` — `curl -s http://localhost:3000/ | grep -o '/_next/static/[^"]*\.css'`.
 - A quick "is the CSS alive" check before reporting a UI change: the CSS bundle is ~78 KB and
   must contain `--accent:` and `bg-surface-raised`.
+
+### Follow-up — inlined CSS, so a page can never render unstyled
+
+The stale-chunk 500 was one failure mode; the user hitting a cached document is another. Both
+end with the same symptom (no CSS at all), so the fix is layered:
+
+1. **Documents must revalidate.** `next.config.ts` now sets
+   `Cache-Control: public, max-age=0, must-revalidate` on `/` and `/builder`. Next's default for a
+   prerendered page is `s-maxage=31536000` — a year of shared caching for a document that
+   references content-hashed chunks. Hashed `/_next/static/*` assets keep their immutable caching;
+   only the small HTML pays the conditional request.
+2. **The stylesheet travels with the markup.** `experimental.inlineCss` inlines the built CSS into
+   the prerendered HTML (verified: one `<style>` tag, ~274 KB document, external chunk still served
+   200 as a fallback). A failed, blocked or stale CSS request can no longer leave the app as an
+   unstyled skeleton — the styles are in the document that references them.
+3. **`npm run preview`** keeps the build and the server on the same generation.
+
+Verified against the running production server on port 3001: `/` and `/builder` both 200 with the
+theme tokens and utility rules present in the inlined CSS, both Geist font files 200, and the main
+JS chunk 200.
