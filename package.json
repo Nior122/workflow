@@ -12,7 +12,8 @@
     "docs:screenshots": "node scripts/capture-screenshots.mjs",
     "check:contrast": "node scripts/check-contrast.mjs",
     "typecheck": "tsc --noEmit",
-    "gate": "npm run typecheck && npm run lint && npm test && npm run check:contrast && npm run build"
+    "gate": "npm run typecheck && npm run lint && npm test && npm run check:contrast && npm run build",
+    "preview": "next build && next start -H 0.0.0.0 -p 3000"
   },
   "dependencies": {
     "@faker-js/faker": "^10.6.0",

@@ -1309,3 +1309,21 @@ no network. A node being "tested" means it executes end to end through the engin
 the documented shape; it does **not** mean it has ever talked to the real Slack, Stripe or
 WhatsApp API. That is the point of the project, but it should not be mistaken for integration
 coverage.
+
+### Environment note — never rebuild under a running `next start`
+
+`next build` writes content-hashed chunk names. A `next start` server that was launched
+*before* the rebuild keeps serving the old HTML, which references a CSS chunk the rebuild has
+already deleted — the stylesheet then returns **500** and the whole UI renders unstyled
+(default black SVG fills, Times New Roman, no spacing). It looks like a design failure and is
+purely an ordering failure.
+
+Rules that came out of it:
+
+- Use `npm run preview` (`next build && next start`) instead of starting the server by hand, so
+  the build and the server are always the same generation.
+- If `npm run gate`/`npm run build` runs while a preview is up, **restart the preview
+  immediately** afterwards. Verified symptom + fix: request the CSS href from the served HTML
+  and check for `200 text/css` — `curl -s http://localhost:3000/ | grep -o '/_next/static/[^"]*\.css'`.
+- A quick "is the CSS alive" check before reporting a UI change: the CSS bundle is ~78 KB and
+  must contain `--accent:` and `bg-surface-raised`.
