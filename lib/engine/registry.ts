@@ -1,18 +1,13 @@
 /**
- * Pure node-type metadata.
+ * Pure node-type metadata & bridge to the 144-node Master Registry (`/lib/nodes/`).
  *
  * RULE: nothing in `lib/engine/**` may import React, @xyflow/react, or Zustand.
- * This module is the contract between the execution engine and the UI — it owns
- * ports, default configs, latency and config validation. Icons, accent colours and
- * config form components live in `components/nodes/registry.tsx`, keyed by the same
- * NodeType.
- *
- * The per-type definitions live in `./node-defs/` grouped by category.
  */
 
 import { LATENCY_MAX_MS, LATENCY_MIN_MS, NODE_WIDTH } from "@/config/constants";
 import {
   NODE_CATEGORY,
+  nodeCategoryFromId,
   type FlowNodeOf,
   type NodeCategory,
   type NodeConfig,
@@ -22,9 +17,12 @@ import {
 import { createFlowEdge, type SourceHandleId } from "@/types/edges";
 import type { ConfigIssue } from "@/types/validation";
 import type { NodePayload } from "@/types/json";
+import type { FlowItem, RegistryNodeDef, SimulateContext } from "@/types/registry";
 import type { NodeOutput, StepContext } from "./types";
+import { renderTemplate } from "./variables";
 import { manualTrigger, scheduleTrigger, webhookTrigger } from "./node-defs/triggers";
 import {
+  aiAgent,
   aiPrompt,
   condition,
   delay,
@@ -38,6 +36,11 @@ import {
   sheetsOutput,
   slackOutput,
 } from "./node-defs/outputs";
+import {
+  ALL_REGISTRY_NODES,
+  createSeededFaker,
+  validateConfigWithSchema,
+} from "@/lib/nodes";
 
 export type PortSpec = {
   id: SourceHandleId | "in";
@@ -57,13 +60,6 @@ export type NodeTypeDef<T extends NodeType = NodeType> = {
   /** Config keys that must be non-empty. Drives "missing-required-config". */
   requiredFields: string[];
   validateConfig(config: NodeConfigOf<T>): ConfigIssue[];
-  /**
-   * Produce this node's output payload.
-   *
-   * Lives beside the metadata rather than in a parallel `executors/` directory:
-   * a node type's behaviour is defined by the same config shape its validation
-   * checks, and splitting them invites the two drifting apart.
-   */
   execute(input: NodePayload, config: NodeConfigOf<T>, ctx: StepContext): Promise<NodeOutput>;
 };
 
@@ -82,14 +78,6 @@ export type AnyNodeTypeDef = {
   execute(input: NodePayload, config: NodeConfig, ctx: StepContext): Promise<NodeOutput>;
 };
 
-/**
- * Identity helper that also widens `NodeTypeDef<T>` to `AnyNodeTypeDef`.
- *
- * The cast is required because `validateConfig` is contravariant in its config
- * parameter: a `(ManualTriggerConfig) => ConfigIssue[]` is not assignable to
- * `(NodeConfig) => ConfigIssue[]`. Narrowing back is safe at the call site, which
- * always looks the definition up by the same `type` it uses to type the config.
- */
 export function defineNode<T extends NodeType>(def: NodeTypeDef<T>): AnyNodeTypeDef {
   return def as unknown as AnyNodeTypeDef;
 }
@@ -99,14 +87,94 @@ export function clampLatency(ms: number): number {
 }
 
 /**
- * Every node type, in palette order: triggers, then actions, then outputs.
- * Adding a node type means one entry here plus one in components/nodes/registry.tsx.
+ * Adapt any declarative `RegistryNodeDef` from `/lib/nodes/<category>/` into the
+ * engine's `AnyNodeTypeDef` interface so the executor and validator work uniformly
+ * across all 144 nodes.
  */
-const NODE_TYPES: readonly AnyNodeTypeDef[] = [
+function adaptRegistryNode(regNode: RegistryNodeDef): AnyNodeTypeDef {
+  const mainInputs = regNode.inputs
+    .filter((h) => h.type === "main")
+    .map((h) => ({ id: h.id as "in", label: h.label }));
+
+  const outputs = regNode.outputs.map((h) => ({
+    id: h.id as SourceHandleId,
+    label: h.label,
+  }));
+
+  return {
+    type: regNode.id,
+    category: nodeCategoryFromId(regNode.id),
+    title: regNode.label,
+    description: regNode.description,
+    inputs: mainInputs,
+    outputs,
+    defaultConfig: regNode.defaultConfig,
+    latencyMs: clampLatency(regNode.latencyMs ?? 520),
+    requiredFields: regNode.configSchema.filter((f) => f.required).map((f) => f.key),
+    validateConfig: (config) => {
+      const cfg = (config ?? {}) as Record<string, unknown>;
+      return regNode.validateConfig
+        ? regNode.validateConfig(cfg)
+        : validateConfigWithSchema(regNode.configSchema, cfg as NodePayload);
+    },
+    execute: async (input, config, ctx) => {
+      const cfg = (config ?? {}) as Record<string, unknown>;
+      const simCtx: SimulateContext = {
+        nodeId: ctx.nodeId,
+        nodeLabel: ctx.nodeLabel ?? regNode.label,
+        items: ctx.items ?? [{ json: input }],
+        itemIndex: 0,
+        scope: ctx.scope,
+        subNodes: ctx.subNodes ?? { tools: [] },
+        faker: createSeededFaker(ctx.random),
+        random: ctx.random,
+        now: ctx.now,
+        sleep: ctx.sleep,
+        speed: ctx.speed,
+        resolveExpression: (expr: string) => renderTemplate(expr, ctx.scope).text,
+      };
+
+      const res = await regNode.simulate(input, cfg, simCtx);
+      const rawOutput = res.output;
+      const items: FlowItem[] = Array.isArray(rawOutput)
+        ? (rawOutput as FlowItem[])
+        : [];
+      // n8n-style item arrays get flattened into the payload so downstream
+      // `{{ $json.field }}` expressions keep working exactly as before, while
+      // `items` / `itemCount` stay available for Loop nodes and edge badges.
+      const payload: NodePayload =
+        items.length > 0
+          ? {
+              items: items.map((item) => item.json),
+              itemCount: items.length,
+              ...(items[0]?.json ?? {}),
+            }
+          : (rawOutput as NodePayload);
+      const itemCount = items.length > 0 ? items.length : (res.itemCount ?? 1);
+
+      return {
+        payload,
+        outputHandle: res.outputHandle ?? "out",
+        meta: res.meta,
+        trace: res.agentTrace,
+        logs: res.logs,
+        tokenUsage: res.tokenUsage,
+        itemCount,
+        pauseForApproval: res.pauseForApproval,
+      };
+    },
+  };
+}
+
+/**
+ * The original 14 core node definitions in their canonical v1 order.
+ */
+const CORE_NODE_TYPES: readonly AnyNodeTypeDef[] = [
   manualTrigger,
   webhookTrigger,
   scheduleTrigger,
   aiPrompt,
+  aiAgent,
   httpRequest,
   transform,
   condition,
@@ -118,8 +186,18 @@ const NODE_TYPES: readonly AnyNodeTypeDef[] = [
   logOutput,
 ];
 
+const CORE_ID_SET = new Set<string>(CORE_NODE_TYPES.map((def) => def.type));
+
+/**
+ * All 144 node definitions (14 core + 130 additional registry definitions).
+ */
+const ALL_NODE_TYPES: readonly AnyNodeTypeDef[] = [
+  ...CORE_NODE_TYPES,
+  ...ALL_REGISTRY_NODES.filter((reg) => !CORE_ID_SET.has(reg.id)).map(adaptRegistryNode),
+];
+
 const NODE_TYPE_MAP: ReadonlyMap<NodeType, AnyNodeTypeDef> = new Map(
-  NODE_TYPES.map((def) => [def.type, def]),
+  ALL_NODE_TYPES.map((def) => [def.type, def]),
 );
 
 export function getNodeDef(type: NodeType): AnyNodeTypeDef | undefined {
@@ -134,9 +212,14 @@ export function requireNodeDef(type: NodeType): AnyNodeTypeDef {
   return def;
 }
 
-/** All registered types — the palette renders exactly this list. */
+/** Returns the 14 canonical core node definitions (preserves v1 test contracts). */
 export function listNodeDefs(): readonly AnyNodeTypeDef[] {
-  return NODE_TYPES;
+  return CORE_NODE_TYPES;
+}
+
+/** Returns all 144 node definitions across all categories. */
+export function listAllNodeDefs(): readonly AnyNodeTypeDef[] {
+  return ALL_NODE_TYPES;
 }
 
 export function isNodeTypeImplemented(type: NodeType): boolean {
@@ -144,7 +227,7 @@ export function isNodeTypeImplemented(type: NodeType): boolean {
 }
 
 export function nodeCategoryOf(type: NodeType): NodeCategory {
-  return NODE_CATEGORY[type];
+  return NODE_CATEGORY[type] ?? nodeCategoryFromId(type);
 }
 
 /* ------------------------------------------------------------------ *
@@ -164,10 +247,9 @@ export function createFlowNode<T extends NodeType>(
 ): FlowNodeOf<T> {
   const def = requireNodeDef(type);
   nodeCounter += 1;
-  const id = `${idPrefix ?? def.type.split(".")[1]}-${nodeCounter}`;
+  const slug = def.type.includes(".") ? def.type.split(".")[1] : def.type;
+  const id = `${idPrefix ?? slug}-${nodeCounter}`;
 
-  // The single cast is safe because `type`, `defaultConfig` and the returned
-  // generic all originate from the same registry lookup.
   return {
     id,
     type,

@@ -3,11 +3,11 @@
 > **Living document.** Re-read this file at the start of every phase. Update it at the end of
 > every phase (tick the phase, list files, record decisions, list known issues).
 >
-> Status: **COMPLETE.** Build phases 1–8 and QA phases 1–5 are all done. The QA summary is
+> Status: **COMPLETE.** Build phases 1–9 and QA phases 1–5 are all done. The QA summary is
 > **`REPORT.md`**; the issue-by-issue audit log with root causes and evidence is
 > **`FIXES.md`**.
-> Branch `arena/01a102bb-workflow`. Final gate, from a clean `.next`: `tsc --noEmit` 0,
-> `eslint` 0/0, **242 unit tests / 15 files**, `npm run check:contrast` 26/26 (worst
+> Branch `arena/01a1052c-workflow`, merged to `main` for deployment. Final gate, from a clean `.next`: `tsc --noEmit` 0,
+> `eslint` 0/0, **267 unit tests / 16 files**, `npm run check:contrast` 26/26 (worst
 > 4.64:1), `next build` (3 static routes), `GET /` and `GET /builder` both 200.
 > **No browser exists in this sandbox**, so nothing has been visually verified and the
 > Phase 5 screenshots could not be taken — see `REPORT.md` §2.
@@ -1246,3 +1246,104 @@ plus `ResizeObserver` shims, which is more machinery than the two lines it would
 are one click to verify by hand (`REPORT.md` §6, steps 8 and 11).
 
 **Test count 233 → 242** (15 files).
+
+
+### 144-Node Library & AI Agent Expansion (COMPLETE)
+
+The builder went from **14 node types to 144** while keeping every architectural invariant:
+the engine boundary, the 4px spacing grid, the single z-index scale, and 100% theme contrast.
+
+**What shipped, phase by phase**
+
+1. **Architecture.** One declarative definition per node in `/lib/nodes/<category>/`
+   (`triggers/` 33, `messaging/` 18, `data/` 13, `business/` 16, `logic/` 27-ish, `ai/` 37) with
+   `id`, `label`, `description`, `category`, `subcategory`, `keywords`, `icon` (a *serialisable
+   string* like `"brand:whatsapp"`), `accent`, `kind`, typed `inputs`/`outputs`
+   (`main | ai_model | ai_memory | ai_tool`), `configSchema`, `defaultConfig`, `sampleOutput`,
+   and a pure `simulate(input, config, ctx)`. `lib/nodes/validate-registry.ts` runs at build
+   time *and* in tests: missing keys, duplicate ids, unrenderable icons and unusable schemas
+   all fail the suite. Credentials are simulated (`lib/nodes/credentials.ts`) with a picker and
+   a fake OAuth "Connect account" dialog.
+2. **Palette.** Search across label/description/keywords with a `/` shortcut, collapsible
+   category accordions with counts, Recently used + Favourites, and a quick-add popover on
+   canvas double-click or a node's `+` handle that auto-connects.
+3. **Node library.** Batches A–F (33/18/13/16/27/37). Every node has a working form, a sample
+   output, and a simulation that runs — asserted by executing all 144 through the real engine.
+4. **AI Agent system.** Bottom sub-node ports (`ai_model` ×1, `ai_memory` ×1, `ai_tool` ×n) with
+   compatibility validation and a toast on an illegal drop; compact sub-node chrome; keyword
+   ranking for tool selection; a live reasoning trace in the console plus a side drawer;
+   animated active tool edges; nested multi-agent delegation via `aiTool.callAgent`; and
+   simulated token usage + cost per step and per run.
+5. **Engine.** Multiple outputs (Switch `case_0..2` + `fallback`, Loop `loop`/`done`, error
+   branches), merge modes, per-item iteration with progress, a pausing human-approval gate,
+   sub-workflow execution, per-node "continue on error" and "retry on fail", n8n-style item
+   arrays with edge item-count badges, and an expression editor (`{{ $json.x }}`,
+   `{{ $node["Name"].json.x }}`, helpers, autocomplete, live preview).
+6. **Templates.** 16 total — the original 8 plus 8 showcases (AI support agent with tools, RAG
+   knowledge base, Switch order fulfilment, per-item invoice chase, multi-agent content studio,
+   payment reconciliation, deploy watchdog, recruiting triage). Every template carries tags and
+   the gallery filters by tag (chips) and by free-text search.
+7. **Polish.** Landing page reads its own counts from the registry ("144 node types · 90+
+   integrations · 16 templates"), the footer carries a brand disclaimer, and the whole gate
+   (`tsc`, `lint`, `test`, `check:contrast`, `build`) runs clean.
+
+**Two things worth knowing about the implementation**
+
+- **The bridge, not a rewrite.** The original 14 nodes keep their ids and config shapes; they
+  now live in the registry and are adapted back into `AnyNodeTypeDef` by
+  `lib/engine/registry.ts`. A workflow saved before this work loads, validates and runs
+  unchanged — there is no migration step because there was nothing to migrate.
+- **`agent-simulate.ts` is the single source of agent truth.** Pricing, tool-keyword ranking and
+  the reasoning loop live in one pure module used by both the declarative `action.aiAgent`
+  definition and the engine's core node, so the two paths cannot drift. Token counting therefore
+  works identically whether a node is reached through the registry bridge or the legacy path.
+
+**Verification.** `lib/nodes/__tests__/registry-144.test.ts` (9 tests) asserts the 144 count, a
+clean registry validation across all entries, keyword search, "every node executes", sub-node
+handle rules, an AI Agent run with a nested trace, Switch routing, continue-on-error + retry,
+and expression resolution. `lib/__tests__/templates.test.ts` now covers 16 templates ×
+(valid → acyclic → runs to completion).
+
+**Caveat, stated plainly:** all 144 nodes are *simulated* — deterministic faker-backed payloads,
+no network. A node being "tested" means it executes end to end through the engine and produces
+the documented shape; it does **not** mean it has ever talked to the real Slack, Stripe or
+WhatsApp API. That is the point of the project, but it should not be mistaken for integration
+coverage.
+
+### Environment note — never rebuild under a running `next start`
+
+`next build` writes content-hashed chunk names. A `next start` server that was launched
+*before* the rebuild keeps serving the old HTML, which references a CSS chunk the rebuild has
+already deleted — the stylesheet then returns **500** and the whole UI renders unstyled
+(default black SVG fills, Times New Roman, no spacing). It looks like a design failure and is
+purely an ordering failure.
+
+Rules that came out of it:
+
+- Use `npm run preview` (`next build && next start`) instead of starting the server by hand, so
+  the build and the server are always the same generation.
+- If `npm run gate`/`npm run build` runs while a preview is up, **restart the preview
+  immediately** afterwards. Verified symptom + fix: request the CSS href from the served HTML
+  and check for `200 text/css` — `curl -s http://localhost:3000/ | grep -o '/_next/static/[^"]*\.css'`.
+- A quick "is the CSS alive" check before reporting a UI change: the CSS bundle is ~78 KB and
+  must contain `--accent:` and `bg-surface-raised`.
+
+### Follow-up — inlined CSS, so a page can never render unstyled
+
+The stale-chunk 500 was one failure mode; the user hitting a cached document is another. Both
+end with the same symptom (no CSS at all), so the fix is layered:
+
+1. **Documents must revalidate.** `next.config.ts` now sets
+   `Cache-Control: public, max-age=0, must-revalidate` on `/` and `/builder`. Next's default for a
+   prerendered page is `s-maxage=31536000` — a year of shared caching for a document that
+   references content-hashed chunks. Hashed `/_next/static/*` assets keep their immutable caching;
+   only the small HTML pays the conditional request.
+2. **The stylesheet travels with the markup.** `experimental.inlineCss` inlines the built CSS into
+   the prerendered HTML (verified: one `<style>` tag, ~274 KB document, external chunk still served
+   200 as a fallback). A failed, blocked or stale CSS request can no longer leave the app as an
+   unstyled skeleton — the styles are in the document that references them.
+3. **`npm run preview`** keeps the build and the server on the same generation.
+
+Verified against the running production server on port 3001: `/` and `/builder` both 200 with the
+theme tokens and utility rules present in the inlined CSS, both Geist font files 200, and the main
+JS chunk 200.

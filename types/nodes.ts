@@ -4,20 +4,16 @@ import type { ValidationIssue } from "./validation";
 export type NodeCategory = "trigger" | "action" | "output";
 
 /**
- * Every node type FlowForge knows about.
- *
- * The union is complete (all 13 types are part of the agreed data model), but the
- * runtime registries in `lib/engine/registry.ts` and `components/nodes/registry.tsx`
- * only contain the types that are actually implemented. The palette renders from the
- * registry, so nothing unimplemented is ever reachable in the UI.
+ * The original 14 strongly-typed core node types from v1.
  */
-export type NodeType =
+export type CoreNodeType =
   // triggers — no input handle, one output
   | "trigger.manual"
   | "trigger.webhook"
   | "trigger.schedule"
   // actions — one input, one or more outputs
   | "action.aiPrompt"
+  | "action.aiAgent"
   | "action.httpRequest"
   | "action.transform"
   | "action.condition"
@@ -28,6 +24,12 @@ export type NodeType =
   | "output.slack"
   | "output.sheets"
   | "output.log";
+
+/**
+ * Every node type FlowForge knows about (the 14 core types + 130 declarative
+ * registry nodes across Triggers, Messaging, Data, Business, Logic, and AI).
+ */
+export type NodeType = CoreNodeType | (string & {});
 
 /* ------------------------------------------------------------------ *
  * Configs — one shape per node type
@@ -52,7 +54,7 @@ export type ScheduleTriggerConfig = {
   timezone: string;
 };
 
-export type AiModel = "ff-mini" | "ff-pro";
+export type AiModel = "ff-mini" | "ff-pro" | "ff-reasoning" | (string & {});
 
 export type AiPromptConfig = {
   systemPrompt: string;
@@ -61,6 +63,46 @@ export type AiPromptConfig = {
   model: AiModel;
   /** 0..1 — influences which canned response the simulator picks. */
   temperature: number;
+};
+
+export type AgentTool = "kbLookup" | "webSearch" | "calculator" | "httpFetch";
+
+export const AGENT_TOOLS: readonly {
+  id: AgentTool;
+  label: string;
+  description: string;
+}[] = [
+  {
+    id: "kbLookup",
+    label: "Knowledge Base",
+    description: "Search internal runbooks and policies",
+  },
+  {
+    id: "webSearch",
+    label: "Web Search",
+    description: "Query public company and domain signals",
+  },
+  {
+    id: "calculator",
+    label: "Calculator",
+    description: "Evaluate numeric formulas and thresholds",
+  },
+  {
+    id: "httpFetch",
+    label: "HTTP Fetch",
+    description: "Fetch live context from an enrichment endpoint",
+  },
+];
+
+export type AiAgentConfig = {
+  systemPrompt: string;
+  /** Goal template supporting {{variables}} resolved from the incoming payload. */
+  goal: string;
+  model: AiModel;
+  /** Simulated tools the agent may invoke while reasoning. */
+  tools: AgentTool[];
+  /** Upper bound on reasoning-act-observe iterations (1..6). */
+  maxSteps: number;
 };
 
 export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
@@ -125,6 +167,7 @@ export type NodeConfig =
   | WebhookTriggerConfig
   | ScheduleTriggerConfig
   | AiPromptConfig
+  | AiAgentConfig
   | HttpRequestConfig
   | TransformConfig
   | ConditionConfig
@@ -133,7 +176,8 @@ export type NodeConfig =
   | EmailConfig
   | SlackConfig
   | SheetsConfig
-  | LogConfig;
+  | LogConfig
+  | Record<string, unknown>;
 
 /** Maps a node type to its config shape so `node.data.config` is correctly typed. */
 export type NodeConfigOf<T extends NodeType> = T extends "trigger.manual"
@@ -144,25 +188,27 @@ export type NodeConfigOf<T extends NodeType> = T extends "trigger.manual"
       ? ScheduleTriggerConfig
       : T extends "action.aiPrompt"
         ? AiPromptConfig
-        : T extends "action.httpRequest"
-          ? HttpRequestConfig
-          : T extends "action.transform"
-            ? TransformConfig
-            : T extends "action.condition"
-              ? ConditionConfig
-              : T extends "action.delay"
-                ? DelayConfig
-                : T extends "action.textFormatter"
-                  ? TextFormatterConfig
-                  : T extends "output.email"
-                    ? EmailConfig
-                    : T extends "output.slack"
-                      ? SlackConfig
-                      : T extends "output.sheets"
-                        ? SheetsConfig
-                        : T extends "output.log"
-                          ? LogConfig
-                          : never;
+        : T extends "action.aiAgent"
+          ? AiAgentConfig
+          : T extends "action.httpRequest"
+            ? HttpRequestConfig
+            : T extends "action.transform"
+              ? TransformConfig
+              : T extends "action.condition"
+                ? ConditionConfig
+                : T extends "action.delay"
+                  ? DelayConfig
+                  : T extends "action.textFormatter"
+                    ? TextFormatterConfig
+                    : T extends "output.email"
+                      ? EmailConfig
+                      : T extends "output.slack"
+                        ? SlackConfig
+                        : T extends "output.sheets"
+                          ? SheetsConfig
+                          : T extends "output.log"
+                            ? LogConfig
+                            : Record<string, unknown>;
 
 /* ------------------------------------------------------------------ *
  * React Flow node shape
@@ -179,6 +225,12 @@ export type FlowNodeData<T extends NodeType = NodeType> = {
   simulateFailure: boolean;
   /** Per-node latency override in ms; the engine clamps it to [300, 1200]. */
   latencyMs?: number;
+  /** Continue workflow execution even if this node throws an error (Phase 5). */
+  continueOnError?: boolean;
+  /** Retry this node automatically on failure before raising an error (Phase 5). */
+  retryOnFail?: boolean;
+  /** Maximum retry attempts when `retryOnFail` is enabled (1..3, default 2). */
+  maxRetries?: number;
   /** Written by the validator; drives the red ring and tooltip on the node. */
   validation?: ValidationIssue[];
 };
@@ -187,14 +239,17 @@ export type FlowNodeData<T extends NodeType = NodeType> = {
 export type FlowNodeOf<T extends NodeType> = Node<FlowNodeData<T>, T>;
 
 /** Discriminated on `type`, so `node.type` narrows `node.data.config`. */
-export type FlowNode = { [T in NodeType]: FlowNodeOf<T> }[NodeType];
+export type FlowNode =
+  | { [T in CoreNodeType]: FlowNodeOf<T> }[CoreNodeType]
+  | FlowNodeOf<NodeType>;
 
-/** Which side of the graph a node sits on. */
-export const NODE_CATEGORY: Record<NodeType, NodeCategory> = {
+/** Which side of the graph a core node sits on. */
+export const CORE_NODE_CATEGORY: Record<CoreNodeType, NodeCategory> = {
   "trigger.manual": "trigger",
   "trigger.webhook": "trigger",
   "trigger.schedule": "trigger",
   "action.aiPrompt": "action",
+  "action.aiAgent": "action",
   "action.httpRequest": "action",
   "action.transform": "action",
   "action.condition": "action",
@@ -206,12 +261,52 @@ export const NODE_CATEGORY: Record<NodeType, NodeCategory> = {
   "output.log": "output",
 };
 
+/**
+ * Dynamic proxy over all node types so `NODE_CATEGORY[type]` works for both
+ * the 14 core node types and all 144 registry nodes (`trigger.*` -> `"trigger"`,
+ * `output.*` -> `"output"`, everything else -> `"action"`), while
+ * `Object.keys(NODE_CATEGORY)` returns the 14 core keys unless queried via
+ * `nodeCategoryOf(type)`.
+ */
+export const NODE_CATEGORY: Record<string, NodeCategory> = new Proxy(
+  { ...CORE_NODE_CATEGORY } as Record<string, NodeCategory>,
+  {
+    get(target, prop) {
+      if (typeof prop === "string") {
+        if (prop in target) return target[prop];
+        if (prop.startsWith("trigger.")) return "trigger";
+        if (prop.startsWith("output.")) return "output";
+        return "action";
+      }
+      return Reflect.get(target, prop);
+    },
+  },
+);
+
+export function nodeCategoryFromId(type: string): NodeCategory {
+  if (type.startsWith("trigger.")) return "trigger";
+  if (type.startsWith("output.")) return "output";
+  return "action";
+}
+
 export function hasInput(type: NodeType): boolean {
-  return NODE_CATEGORY[type] !== "trigger";
+  if (
+    type.startsWith("trigger.") ||
+    type.startsWith("aiModel.") ||
+    type.startsWith("aiMemory.") ||
+    type.startsWith("aiTool.") ||
+    type === "logic.stickyNote"
+  ) {
+    return false;
+  }
+  return true;
 }
 
 export function hasOutput(type: NodeType): boolean {
-  return NODE_CATEGORY[type] !== "output";
+  if (type.startsWith("output.") || type === "logic.stopAndError" || type === "logic.stickyNote") {
+    return false;
+  }
+  return true;
 }
 
 /** Build a brand-new KeyValuePair row with a stable id. */

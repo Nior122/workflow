@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import { browserEffects, executeWorkflow } from "@/lib/engine/executor";
 import { analyzeGraph } from "@/lib/engine/graph";
 import { validateWorkflow } from "@/lib/engine/validator";
@@ -19,6 +19,33 @@ let runCounter = 0;
  */
 export function useRunWorkflow() {
   const abortRef = useRef<AbortController | null>(null);
+
+  /**
+   * Browser effects plus the interactive human-approval gate: a
+   * `logic.waitForApproval` step parks a resolver in the UI store and the run
+   * resumes only after Approve (or fails on Reject).
+   */
+  const effects = useMemo(
+    () => ({
+      ...browserEffects,
+      requestApproval: (request: {
+        nodeId: string;
+        nodeLabel: string;
+        summary: string;
+        details?: Record<string, unknown>;
+      }) =>
+        new Promise<boolean>((resolve) => {
+          useUiStore.getState().setApprovalPrompt({
+            nodeId: request.nodeId,
+            nodeLabel: request.nodeLabel,
+            summary: request.summary,
+            details: request.details,
+            resolve,
+          });
+        }),
+    }),
+    [],
+  );
 
   const run = useCallback(async () => {
     const { nodes, edges, workflowName } = useWorkflowStore.getState();
@@ -56,7 +83,7 @@ export function useRunWorkflow() {
         nodes,
         edges,
         speed,
-        effects: browserEffects,
+        effects,
         emit: (event) => useRunStore.getState().applyEvent(event),
         signal: controller.signal,
       });
@@ -68,8 +95,14 @@ export function useRunWorkflow() {
     } finally {
       abortRef.current = null;
       useUiStore.getState().setIsRunning(false);
+      // A cancelled or errored run must not leave a dangling approval prompt.
+      const pending = useUiStore.getState().approvalPrompt;
+      if (pending) {
+        pending.resolve(false);
+        useUiStore.getState().setApprovalPrompt(null);
+      }
     }
-  }, []);
+  }, [effects]);
 
   const cancel = useCallback(() => {
     abortRef.current?.abort();

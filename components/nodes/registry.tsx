@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Bot,
   CalendarClock,
   Globe,
   GitBranch,
@@ -18,9 +19,13 @@ import {
 } from "lucide-react";
 import { parseJsonObject } from "@/types/json";
 import { requireNodeDef } from "@/lib/engine/registry";
+import { getRegistryNode } from "@/lib/nodes";
+import { resolveNodeIcon } from "./icon-resolver";
 import type {
+  AiAgentConfig,
   AiPromptConfig,
   ConditionConfig,
+  CoreNodeType,
   DelayConfig,
   EmailConfig,
   HttpRequestConfig,
@@ -36,35 +41,29 @@ import type {
   TransformConfig,
   WebhookTriggerConfig,
 } from "@/types/nodes";
+import type { HandleSpec, NodeKind, RegistryCategory } from "@/types/registry";
 
-/**
- * UI-side counterpart to `lib/engine/registry.ts`.
- *
- * That module owns behaviour and metadata (ports, defaults, latency, validation)
- * and must stay free of React. This one owns presentation: icon, accent colour and
- * the one-line summary shown in the node body. Both are keyed by the same NodeType,
- * so a new node type needs one entry in each and nothing else.
- */
 export type NodeUiDef = {
   type: NodeType;
   category: NodeCategory;
+  registryCategory?: RegistryCategory;
+  subcategory?: string;
+  nodeKind?: NodeKind;
+  inputs?: readonly HandleSpec[];
+  outputs?: readonly HandleSpec[];
   icon: LucideIcon;
   accent: string;
   /** One-line description of the current config, shown in the node body. */
   summarize: (config: NodeConfig) => string;
 };
 
-/**
- * Warm throughout, in three families: triggers amber, actions ember, outputs stone.
- * Deliberately no blue or purple, so nothing competes with the ember brand accent,
- * and no node sits close to the error red.
- */
-/** Per-node accent colours. Exported so the landing demo cannot drift from the builder. */
-export const ACCENTS = {
+/** Per-node accent colours for the 14 core node types. */
+export const ACCENTS: Record<CoreNodeType, string> = {
   "trigger.manual": "#F5B301",
   "trigger.webhook": "#E0913D",
   "trigger.schedule": "#C9A227",
   "action.aiPrompt": "#FFA23A",
+  "action.aiAgent": "#FF7847",
   "action.httpRequest": "#FF6B35",
   "action.transform": "#F2884B",
   "action.condition": "#E4633F",
@@ -74,7 +73,7 @@ export const ACCENTS = {
   "output.slack": "#8FA79A",
   "output.sheets": "#7FA88F",
   "output.log": "#8B93A7",
-} as const satisfies Record<NodeType, string>;
+};
 
 function truncate(value: string, max = 46): string {
   const flat = value.replace(/\s+/g, " ").trim();
@@ -90,7 +89,7 @@ function jsonSummary(raw: string, emptyLabel: string): string {
 
 type Summary<T extends NodeConfig> = (config: T) => string;
 
-const SUMMARIES: Record<NodeType, Summary<NodeConfig>> = {
+const SUMMARIES: Record<string, Summary<NodeConfig>> = {
   "trigger.manual": ((config: ManualTriggerConfig) =>
     jsonSummary(config.payloadJson, "empty payload")) as Summary<NodeConfig>,
 
@@ -104,6 +103,11 @@ const SUMMARIES: Record<NodeType, Summary<NodeConfig>> = {
     config.promptTemplate.trim()
       ? truncate(config.promptTemplate)
       : "prompt template required") as Summary<NodeConfig>,
+
+  "action.aiAgent": ((config: AiAgentConfig) =>
+    config.goal.trim()
+      ? `${config.tools.length} tool${config.tools.length === 1 ? "" : "s"} · ${truncate(config.goal, 34)}`
+      : "goal required") as Summary<NodeConfig>,
 
   "action.httpRequest": ((config: HttpRequestConfig) =>
     config.url.trim()
@@ -144,11 +148,12 @@ const SUMMARIES: Record<NodeType, Summary<NodeConfig>> = {
   "output.log": ((config: LogConfig) => config.label || "untitled log") as Summary<NodeConfig>,
 };
 
-const ICONS: Record<NodeType, LucideIcon> = {
+const CORE_ICONS: Record<string, LucideIcon> = {
   "trigger.manual": Play,
   "trigger.webhook": Webhook,
   "trigger.schedule": CalendarClock,
   "action.aiPrompt": Sparkles,
+  "action.aiAgent": Bot,
   "action.httpRequest": Globe,
   "action.transform": Shuffle,
   "action.condition": GitBranch,
@@ -160,29 +165,60 @@ const ICONS: Record<NodeType, LucideIcon> = {
   "output.log": Terminal,
 };
 
-const FALLBACK_ICON = Terminal;
+function genericSummarize(type: NodeType, config: NodeConfig): string {
+  const regNode = getRegistryNode(type);
+  const cfg = (config ?? {}) as Record<string, unknown>;
+  if (regNode) {
+    for (const field of regNode.configSchema) {
+      if (field.type === "credential") continue;
+      const val = cfg[field.key];
+      if (typeof val === "string" && val.trim().length > 0) {
+        return truncate(`${field.label}: ${val}`, 42);
+      }
+      if (typeof val === "number") {
+        return `${field.label}: ${val}`;
+      }
+    }
+    return regNode.subcategory || regNode.label;
+  }
+  return requireNodeDef(type).title;
+}
 
 /**
- * Presentation metadata for a node type.
- *
- * Falls back to a neutral icon and the category colour rather than throwing, so an
- * imported workflow containing a type this build does not know still renders.
+ * Presentation metadata for any of the 144 node types.
  */
 export function getNodeUi(type: NodeType): NodeUiDef {
   const engineDef = requireNodeDef(type);
+  const regNode = getRegistryNode(type);
+  const icon =
+    CORE_ICONS[type] ??
+    (regNode ? resolveNodeIcon(regNode.icon) : Terminal);
+  const accent =
+    (ACCENTS as Record<string, string>)[type] ??
+    regNode?.accent ??
+    "#A8A29E";
+
   return {
     type,
     category: engineDef.category,
-    icon: ICONS[type] ?? FALLBACK_ICON,
-    accent: ACCENTS[type] ?? "#A8A29E",
-    summarize: SUMMARIES[type] ?? (() => engineDef.title),
+    registryCategory: regNode?.category,
+    subcategory: regNode?.subcategory,
+    nodeKind: regNode?.type,
+    inputs: regNode?.inputs,
+    outputs: regNode?.outputs,
+    icon,
+    accent,
+    summarize: SUMMARIES[type] ?? ((cfg) => genericSummarize(type, cfg)),
   };
 }
 
 /** Summarise a node's config for its body, never throwing on malformed config. */
 export function summarizeConfig(type: NodeType, config: NodeConfig): string {
   try {
-    return SUMMARIES[type]?.(config) ?? requireNodeDef(type).title;
+    if (type in SUMMARIES) {
+      return SUMMARIES[type](config);
+    }
+    return genericSummarize(type, config);
   } catch {
     return "unconfigured";
   }

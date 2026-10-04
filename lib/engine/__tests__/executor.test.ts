@@ -454,6 +454,57 @@ describe("node behaviours", () => {
 
     expect(step(result, "o1")?.output).toEqual(payload);
   });
+
+  it("aiAgent produces a multi-step reasoning trace and forwards {{text}} downstream", async () => {
+    const nodes = [
+      node("t1", "trigger.manual", { payloadJson: TRIGGER_PAYLOAD }),
+      node("ag1", "action.aiAgent", {
+        systemPrompt: "You are an ops agent.",
+        goal: "Triage {{user.name}} with budget {{budget}}",
+        model: "ff-pro",
+        tools: ["kbLookup", "calculator"],
+        maxSteps: 3,
+      }),
+      node("e1", "output.email", {
+        to: "{{user.email}}",
+        subject: "Agent report for {{user.name}}",
+        body: "{{text}}",
+      }),
+    ];
+    const result = await harness(nodes, [edge("t1", "ag1"), edge("ag1", "e1")]).run();
+
+    const agentStep = step(result, "ag1");
+    expect(agentStep?.status).toBe("success");
+    expect(agentStep?.trace).toHaveLength(3);
+    expect(agentStep?.trace?.[0]?.tool).toBe("kbLookup");
+    expect(agentStep?.trace?.[1]?.tool).toBe("calculator");
+    expect(agentStep?.trace?.[2]?.tool).toBeNull();
+    expect(agentStep?.meta?.goal).toBe("Triage Ada with budget 1200");
+
+    const emailStep = step(result, "e1");
+    expect(emailStep?.status).toBe("success");
+    expect(typeof emailStep?.output?.body).toBe("string");
+    expect((emailStep?.output?.body as string).length).toBeGreaterThan(0);
+  });
+
+  it("aiAgent with maxSteps=1 synthesizes directly without invoking tools", async () => {
+    const nodes = [
+      node("t1", "trigger.manual", { payloadJson: TRIGGER_PAYLOAD }),
+      node("ag1", "action.aiAgent", {
+        systemPrompt: "",
+        goal: "Quick check for {{user.name}}",
+        model: "ff-mini",
+        tools: ["webSearch", "httpFetch"],
+        maxSteps: 1,
+      }),
+    ];
+    const result = await harness(nodes, [edge("t1", "ag1")]).run();
+
+    const agentStep = step(result, "ag1");
+    expect(agentStep?.trace).toHaveLength(1);
+    expect(agentStep?.trace?.[0]?.tool).toBeNull();
+    expect(agentStep?.meta?.toolsUsed).toBe("none");
+  });
 });
 
 describe("statusMapFromSteps", () => {

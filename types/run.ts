@@ -1,5 +1,6 @@
 import type { NodePayload } from "./json";
 import type { NodeType } from "./nodes";
+import type { AgentTraceEntry, TokenUsageSummary } from "./registry";
 import { EXECUTION_SPEEDS } from "@/config/constants";
 
 export type NodeRunStatus =
@@ -37,6 +38,15 @@ export type RunError = {
   nodeId?: string;
 };
 
+/**
+ * One reasoning-act-observe iteration produced by an AI Agent node.
+ *
+ * Aliased to the registry's `AgentTraceEntry` so a trace produced by the declarative
+ * `/lib/nodes/ai` simulator and one produced by the engine's core node are the same
+ * type — no casting, no drift.
+ */
+export type AgentTraceStep = AgentTraceEntry;
+
 /** One row in the run console; expandable to reveal exact input/output JSON. */
 export type StepLog = {
   stepId: string;
@@ -52,6 +62,16 @@ export type StepLog = {
   error?: RunError;
   /** Executor-specific extras: branch taken, mock HTTP status, rows written… */
   meta?: { [key: string]: NodePayload[string] };
+  /** Structured reasoning trace when the step is an AI Agent node. */
+  trace?: AgentTraceStep[];
+  /** Human-readable log lines emitted by the node's simulator. */
+  logs?: string[];
+  /** Simulated token and cost metrics for AI nodes. */
+  tokenUsage?: TokenUsageSummary;
+  /** Number of items emitted by this step (`1 item`, `3 items`, etc.). */
+  itemCount?: number;
+  /** Number of retries attempted before succeeding or failing. */
+  retriesUsed?: number;
 };
 
 /** A payload that moved along an edge, used to schedule the particle animation. */
@@ -61,6 +81,7 @@ export type EdgeTransition = {
   toNodeId: string;
   startedAt: number;
   durationMs: number;
+  itemCount?: number;
 };
 
 export type RunResult = {
@@ -76,6 +97,10 @@ export type RunResult = {
   steps: StepLog[];
   edges: EdgeTransition[];
   error?: RunError;
+  /** Aggregated token usage across all AI steps in this run. */
+  totalTokens?: number;
+  /** Aggregated simulated LLM cost in USD across all AI steps in this run. */
+  estimatedCostUsd?: number;
 };
 
 /**
@@ -92,6 +117,7 @@ export type EngineEvent =
       at: number;
       output: NodePayload;
       durationMs: number;
+      itemCount?: number;
     }
   | {
       kind: "node:error";
@@ -108,6 +134,7 @@ export type EngineEvent =
       toNodeId: string;
       at: number;
       durationMs: number;
+      itemCount?: number;
     }
   | {
       kind: "run:end";

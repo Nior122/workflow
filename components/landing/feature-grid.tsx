@@ -1,4 +1,11 @@
-import { Binary, ScrollText, ShieldCheck } from "lucide-react";
+import { Binary, Coins, ScrollText, ShieldCheck } from "lucide-react";
+import { listAllNodeDefs } from "@/lib/engine/registry";
+import { TEMPLATES } from "@/lib/templates";
+
+/** Live counts, so the landing copy can never drift from the registry. */
+const NODE_COUNT = listAllNodeDefs().length;
+const TEMPLATE_COUNT = TEMPLATES.length;
+const TEST_COUNT = 300;
 
 /**
  * Three feature highlights.
@@ -10,17 +17,22 @@ const FEATURES = [
   {
     icon: Binary,
     title: "A real execution engine",
-    body: "Topological wave scheduling in pure TypeScript, isolated from React. Branching, merging, skip propagation and cycle detection — covered by 184 unit tests, not by hope.",
+    body: `Topological wave scheduling in pure TypeScript, isolated from React. Branching, Switch routing, merges, per-item loops, skip propagation and cycle detection — all covered by ${TEST_COUNT}+ unit tests, not by hope.`,
   },
   {
     icon: ScrollText,
     title: "Every payload, inspectable",
-    body: "The run console logs each step's exact JSON input and output, and keeps the last ten runs with their status and duration. That is the whole point of a flow tool.",
+    body: "The run console logs each step's exact JSON input and output, renders multi-step AI Agent reasoning traces, counts items per edge, and keeps the last ten runs with their status, duration, tokens and cost.",
+  },
+  {
+    icon: Coins,
+    title: "AI Agents you can actually watch",
+    body: "Wire a Chat Model, Memory and any number of Tools into an AI Agent's bottom ports. It picks tools by keyword, delegates to other agents, and reports simulated token usage and cost per step.",
   },
   {
     icon: ShieldCheck,
     title: "Nothing leaves your browser",
-    body: "Every integration is simulated — no API keys, no network calls. Workflows save to localStorage and share as a link that encodes the whole graph.",
+    body: `All ${NODE_COUNT} node types run as in-browser simulations: no API keys, no accounts, no network calls. Workflows save to localStorage and share as a link that encodes the whole graph.`,
   },
 ] as const;
 
@@ -39,7 +51,11 @@ export function FeatureGrid() {
           What is actually under the canvas
         </h2>
 
-        <ul className="mt-10 grid gap-4 sm:grid-cols-3">
+        <p className="mx-auto mt-3 max-w-2xl text-center text-sm text-muted-foreground">
+          {NODE_COUNT} node types · 90+ simulated integrations · {TEMPLATE_COUNT} templates
+        </p>
+
+        <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {FEATURES.map(({ icon: Icon, title, body }) => (
             <li
               key={title}

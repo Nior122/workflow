@@ -12,12 +12,13 @@ import { LATENCY_MAX_MS, LATENCY_MIN_MS, NODE_WIDTH } from "@/config/constants";
 import { NODE_CATEGORY, type NodeType } from "@/types/nodes";
 
 describe("node registry", () => {
-  it("exposes all thirteen node types, grouped triggers → actions → outputs", () => {
+  it("exposes all fourteen node types, grouped triggers → actions → outputs", () => {
     expect(listNodeDefs().map((def) => def.type)).toEqual([
       "trigger.manual",
       "trigger.webhook",
       "trigger.schedule",
       "action.aiPrompt",
+      "action.aiAgent",
       "action.httpRequest",
       "action.transform",
       "action.condition",
@@ -55,6 +56,7 @@ describe("node registry", () => {
     ["trigger.webhook", 0, 1],
     ["trigger.schedule", 0, 1],
     ["action.aiPrompt", 1, 1],
+    ["action.aiAgent", 1, 1],
     ["action.httpRequest", 1, 1],
     ["action.transform", 1, 1],
     ["action.condition", 1, 2],
@@ -207,5 +209,53 @@ describe("config validation", () => {
         temperature: 0.2,
       }),
     ).toEqual([]);
+  });
+
+  it("requires a goal on the AI Agent node", () => {
+    const def = requireNodeDef("action.aiAgent");
+    const issues = def.validateConfig({
+      systemPrompt: "",
+      goal: "   ",
+      model: "ff-pro",
+      tools: ["kbLookup"],
+      maxSteps: 3,
+    });
+
+    expect(issues.map((issue) => issue.code)).toContain("missing-required-config");
+  });
+
+  it("rejects maxSteps outside 1..6 on the AI Agent node", () => {
+    const def = requireNodeDef("action.aiAgent");
+    const low = def.validateConfig({
+      systemPrompt: "",
+      goal: "triage {{user.name}}",
+      model: "ff-pro",
+      tools: [],
+      maxSteps: 0,
+    });
+    const high = def.validateConfig({
+      systemPrompt: "",
+      goal: "triage {{user.name}}",
+      model: "ff-pro",
+      tools: [],
+      maxSteps: 7,
+    });
+
+    expect(low.map((issue) => issue.code)).toContain("invalid-config");
+    expect(high.map((issue) => issue.code)).toContain("invalid-config");
+  });
+
+  it("rejects unbalanced {{ }} tokens in the AI Agent goal or system prompt", () => {
+    const def = requireNodeDef("action.aiAgent");
+    const issues = def.validateConfig({
+      systemPrompt: "Role for {{org",
+      goal: "Investigate {{user.name",
+      model: "ff-pro",
+      tools: ["calculator"],
+      maxSteps: 2,
+    });
+
+    expect(issues).toHaveLength(2);
+    expect(issues.every((issue) => issue.code === "invalid-config")).toBe(true);
   });
 });

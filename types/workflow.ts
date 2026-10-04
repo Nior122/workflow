@@ -1,6 +1,6 @@
 import type { ExecutionSpeed, RunResult } from "./run";
 import type { FlowEdge } from "./edges";
-import type { FlowNode } from "./nodes";
+import type { FlowNode, NodeType } from "./nodes";
 import { DEFAULT_SPEED, DEFAULT_VIEWPORT } from "@/config/constants";
 
 export const WORKFLOW_SCHEMA_VERSION = 1;
@@ -28,6 +28,8 @@ export type AppSettings = {
   speed: ExecutionSpeed;
   snapToGrid: boolean;
   showMinimap: boolean;
+  /** Node types pinned to the top of the palette. */
+  favouriteNodes?: NodeType[];
 };
 
 /** The single object written to localStorage under STORAGE_KEY. */
@@ -45,6 +47,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   speed: DEFAULT_SPEED,
   snapToGrid: false,
   showMinimap: true,
+  favouriteNodes: [],
 };
 
 export function createWorkflow(

@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { APP_NAME } from "@/config/constants";
 import { DemoLoop } from "@/components/landing/demo-loop";
 import { FeatureGrid } from "@/components/landing/feature-grid";
+import { listAllNodeDefs } from "@/lib/engine/registry";
+import { TEMPLATES } from "@/lib/templates";
 
 /**
  * Landing page.
@@ -16,6 +18,11 @@ import { FeatureGrid } from "@/components/landing/feature-grid";
  * Phase 1 note in PROJECT_NOTES.md about the dead `#how-it-works` anchor.
  */
 export default function LandingPage() {
+  // Read from the registry rather than hardcoding a number that will drift the
+  // moment someone adds a node — the copy is the last place to learn about it.
+  const nodeCount = listAllNodeDefs().length;
+  const templateCount = TEMPLATES.length;
+
   return (
     <main className="relative flex min-h-dvh flex-col overflow-hidden bg-background">
       {/* Ember wash behind the hero. */}
@@ -52,10 +59,29 @@ export default function LandingPage() {
         </h1>
 
         <p className="mt-5 max-w-xl text-base leading-relaxed text-pretty text-muted-foreground sm:text-lg">
-          Drag triggers, actions and outputs onto an infinite canvas, wire them
-          together, and step through every payload in a live console. Every
-          integration is simulated — no API keys, nothing leaves your browser.
+          Drag 90+ integrations onto an infinite canvas — trigger, action, logic,
+          data and AI Agent nodes — wire them together, and step through every
+          payload in a live console. Everything is simulated: no API keys, nothing
+          leaves your browser.
         </p>
+
+        <ul className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 font-mono text-[11px] text-muted-foreground">
+          <li>
+            <span className="text-foreground">{nodeCount}</span> node types
+          </li>
+          <li aria-hidden>·</li>
+          <li>
+            <span className="text-foreground">90+</span> integrations
+          </li>
+          <li aria-hidden>·</li>
+          <li>
+            <span className="text-foreground">{templateCount}</span> templates
+          </li>
+          <li aria-hidden>·</li>
+          <li>
+            <span className="text-foreground">100%</span> in-browser
+          </li>
+        </ul>
 
         <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
           <Button asChild size="lg">
@@ -91,8 +117,19 @@ export default function LandingPage() {
 
       <FeatureGrid />
 
-      <footer className="relative z-page mt-auto border-t border-border px-6 py-5 text-center text-xs text-muted-foreground">
-        Built with Next.js, React Flow and Zustand. All integrations simulated.
+      <footer className="relative z-page mt-auto space-y-2 border-t border-border px-6 py-6 text-center text-xs text-muted-foreground">
+        <p>
+          Built with Next.js, React Flow and Zustand. Every integration is
+          simulated in the browser — no API keys, no accounts, no network calls.
+        </p>
+        <p className="mx-auto max-w-2xl leading-relaxed text-[11px] text-muted-foreground/80">
+          {APP_NAME} is an independent demo project and is not affiliated with,
+          endorsed by, or connected to any of the products it simulates. Product
+          names, logos and brands shown in the node library — including Slack,
+          WhatsApp, Stripe, Shopify, Google, OpenAI and Anthropic — remain the
+          property of their respective owners and are used here only to illustrate
+          what a simulated integration would look like.
+        </p>
       </footer>
     </main>
   );

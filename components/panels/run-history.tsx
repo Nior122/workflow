@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { Check, Clock, Trash2, XCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { formatTokens, formatUsd } from "./run-console";
 import { Button } from "@/components/ui/button";
 import { useRunHistory, useRunStore } from "@/store/runStore";
 import type { RunResult } from "@/types/run";
@@ -74,6 +75,9 @@ export function RunHistory() {
                 <p className="mt-1 font-mono text-[10px] text-muted-foreground">
                   {succeeded} ok{skipped > 0 ? ` · ${skipped} skipped` : ""} ·{" "}
                   {new Date(run.startedAt).toLocaleTimeString([], { hour12: false })}
+                  {run.totalTokens
+                    ? ` · ${formatTokens(run.totalTokens)} tok · ${formatUsd(run.estimatedCostUsd ?? 0)}`
+                    : ""}
                 </p>
               </div>
 

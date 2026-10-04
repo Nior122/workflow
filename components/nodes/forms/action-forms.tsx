@@ -13,16 +13,19 @@ import {
 } from "./fields";
 import { errorFor, type ConfigFormProps } from "./types";
 import { parseJsonObject } from "@/types/json";
-import type {
-  AiModel,
-  AiPromptConfig,
-  ConditionConfig,
-  ConditionOperator,
-  DelayConfig,
-  HttpMethod,
-  HttpRequestConfig,
-  TextFormatterConfig,
-  TransformConfig,
+import {
+  AGENT_TOOLS,
+  type AgentTool,
+  type AiAgentConfig,
+  type AiModel,
+  type AiPromptConfig,
+  type ConditionConfig,
+  type ConditionOperator,
+  type DelayConfig,
+  type HttpMethod,
+  type HttpRequestConfig,
+  type TextFormatterConfig,
+  type TransformConfig,
 } from "@/types/nodes";
 
 const MODELS: readonly { value: AiModel; label: string }[] = [
@@ -95,6 +98,121 @@ export function AiPromptForm({
           step={0.1}
           disabled={disabled}
           onChange={(temperature) => onChange({ ...config, temperature })}
+        />
+      </Field>
+    </div>
+  );
+}
+
+export function AiAgentForm({
+  config,
+  onChange,
+  disabled,
+  issues,
+}: ConfigFormProps<AiAgentConfig>) {
+  const systemId = useFieldId("agent-system");
+  const goalId = useFieldId("agent-goal");
+  const modelId = useFieldId("agent-model");
+  const stepsId = useFieldId("agent-steps");
+
+  const toggleTool = (tool: AgentTool) => {
+    const next = config.tools.includes(tool)
+      ? config.tools.filter((entry) => entry !== tool)
+      : [...config.tools, tool];
+    onChange({ ...config, tools: next });
+  };
+
+  return (
+    <div className="space-y-4">
+      <Field
+        label="System prompt"
+        htmlFor={systemId}
+        hint="optional"
+        error={errorFor(issues, "systemPrompt")}
+      >
+        <TextArea
+          id={systemId}
+          rows={2}
+          value={config.systemPrompt}
+          disabled={disabled}
+          invalid={Boolean(errorFor(issues, "systemPrompt"))}
+          placeholder="You are an autonomous operations agent."
+          onChange={(systemPrompt) => onChange({ ...config, systemPrompt })}
+        />
+      </Field>
+
+      <Field
+        label="Agent goal"
+        htmlFor={goalId}
+        hint="{{variables}}"
+        error={errorFor(issues, "goal")}
+      >
+        <TextArea
+          id={goalId}
+          rows={4}
+          value={config.goal}
+          disabled={disabled}
+          invalid={Boolean(errorFor(issues, "goal"))}
+          placeholder="Investigate {{user.name}}'s request and recommend the next action…"
+          onChange={(goal) => onChange({ ...config, goal })}
+        />
+      </Field>
+
+      <Field label="Model" htmlFor={modelId}>
+        <Select
+          id={modelId}
+          value={config.model}
+          options={MODELS}
+          disabled={disabled}
+          onChange={(model) => onChange({ ...config, model })}
+        />
+      </Field>
+
+      <Field label="Tools" hint={`${config.tools.length} enabled`}>
+        <div className="space-y-2">
+          {AGENT_TOOLS.map((tool) => {
+            const checked = config.tools.includes(tool.id);
+            return (
+              <label
+                key={tool.id}
+                className="flex cursor-pointer items-start gap-3 rounded-md border border-border bg-surface px-3 py-2 transition-colors hover:border-accent/40"
+              >
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  disabled={disabled}
+                  onChange={() => toggleTool(tool.id)}
+                  className="mt-1 size-4 cursor-pointer rounded border-border accent-[hsl(var(--accent))]"
+                />
+                <span className="min-w-0 flex-1">
+                  <span className="block text-xs font-medium text-foreground">
+                    {tool.label}
+                  </span>
+                  <span className="mt-1 block text-[11px] leading-snug text-muted-foreground">
+                    {tool.description}
+                  </span>
+                </span>
+              </label>
+            );
+          })}
+        </div>
+      </Field>
+
+      <Field
+        label="Max reasoning steps"
+        htmlFor={stepsId}
+        hint="1–6"
+        error={errorFor(issues, "maxSteps")}
+      >
+        <NumberInput
+          id={stepsId}
+          value={config.maxSteps}
+          min={1}
+          max={6}
+          step={1}
+          suffix="steps"
+          disabled={disabled}
+          onChange={(maxSteps) => onChange({ ...config, maxSteps })}
         />
       </Field>
     </div>
