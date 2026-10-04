@@ -6,7 +6,7 @@
 > Status: **COMPLETE.** Build phases 1–9 and QA phases 1–5 are all done. The QA summary is
 > **`REPORT.md`**; the issue-by-issue audit log with root causes and evidence is
 > **`FIXES.md`**.
-> Branch `arena/01a1052c-workflow`. Final gate, from a clean `.next`: `tsc --noEmit` 0,
+> Branch `arena/01a1052c-workflow`, merged to `main` for deployment. Final gate, from a clean `.next`: `tsc --noEmit` 0,
 > `eslint` 0/0, **267 unit tests / 16 files**, `npm run check:contrast` 26/26 (worst
 > 4.64:1), `next build` (3 static routes), `GET /` and `GET /builder` both 200.
 > **No browser exists in this sandbox**, so nothing has been visually verified and the

@@ -292,29 +292,22 @@ npm run dev        # http://localhost:3000
 ## Deploying to Vercel
 
 Both routes prerender as static content, so there is no server runtime, no environment
-variables and no database. [`vercel.json`](vercel.json) already sets the framework, install
-and build commands, and Node is pinned to 22 via `engines` and `.nvmrc`.
+variables and no database. [`vercel.json`](vercel.json) sets the framework, install and build
+commands, and Node is pinned to 22 via `engines` and `.nvmrc`.
 
-> ### ⚠️ Set the production branch — `main` is not deployable
->
-> All the code lives on **`arena/01a1052c-workflow`**. The `main` branch contains only
-> `README.md`, so a default import **will fail at the install step** with no `package.json`.
->
-> Either point Vercel at the branch, or merge it into `main` first (see below).
+**`main` is the deployable branch.** All the work — the 144-node library, the AI Agent
+sub-node system, the engine upgrades and the 16 templates — is merged there, so a plain
+Git import with default settings deploys correctly.
 
-**Option A — Git import (recommended, no CLI)**
+### Option A — Git import (recommended, no CLI)
 
 1. <https://vercel.com/new> → **Import** the `Nior122/workflow` repository.
-2. Before deploying, open **Settings → General → Production Branch** and set it to
-   `arena/01a102bb-workflow`.
-3. Deploy. Vercel picks up Next.js automatically; `vercel.json` supplies the rest.
-4. Every later push to that branch redeploys production.
+2. Leave the defaults: framework **Next.js**, production branch **`main`**, install
+   `npm ci`, build `npm run build` (the last two come from `vercel.json`).
+3. **Deploy.** Every later push to `main` redeploys production; pull requests get their own
+   preview URL.
 
-**Option B — merge to `main` first, then import with defaults**
-
-Merge the open pull request into `main`, then import normally — no branch setting needed.
-
-**Option C — CLI**
+### Option B — CLI
 
 ```bash
 npm i -g vercel
@@ -323,6 +316,27 @@ vercel link
 vercel            # preview
 vercel --prod     # production
 ```
+
+### What Vercel runs
+
+| Step | Command | Notes |
+| --- | --- | --- |
+| Install | `npm ci` | `package-lock.json` is committed; Node 22 from `.nvmrc` + `engines` |
+| Build | `npm run build` | `next build` — no env vars, no secrets, no database |
+| Output | `.next` | `/`, `/_not-found` and `/builder` all prerender as static |
+
+**Notes for the deployment**
+
+- `vercel.json` adds `X-Content-Type-Options`, `X-Frame-Options: DENY` and a
+  `Referrer-Policy` header to every route. The last one matters because *Copy share link*
+  puts an lz-string-compressed graph in the URL hash.
+- `next.config.ts` marks `/` and `/builder` with `Cache-Control: public, max-age=0,
+  must-revalidate` and inlines the built CSS into the document (see
+  `PROJECT_NOTES.md` → "inlined CSS"). Content-hashed `/_next/static/*` files keep
+  Vercel's immutable caching, which is where the bytes are.
+- Vercel's default **Deployment Protection** can make a fresh project's URLs require a
+  login. If a preview link 401s for someone, turn it off under
+  *Settings → Deployment Protection*.
 
 **Verified before shipping:** `npm ci` → `next build` from a clean `.next` compiles and
 prerenders `/`, `/_not-found` and `/builder` as static; `next start` then serves `/` and
@@ -453,8 +467,9 @@ primitives in `components/ui`.
   after every edit pause. Failed saves raise immediately.
 - Mobile sheets are a fixed `60dvh` with no drag-to-resize, and the compact tier has no
   minimap.
-- Not deployed to Vercel (`vercel.json` is ready). CI runs the full gate on every push via
-  `.github/workflows/ci.yml`.
+- Not deployed to production by hand: `vercel.json` is committed and `main` is deployable, so a
+  Vercel import of the repository works with default settings (see *Deploying to Vercel*). CI runs
+  the full gate on every push via `.github/workflows/ci.yml`.
 
 A fuller list, with what each one would take to close, is in [`REPORT.md`](./REPORT.md) §4.
 
