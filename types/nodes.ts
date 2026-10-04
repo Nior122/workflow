@@ -6,7 +6,7 @@ export type NodeCategory = "trigger" | "action" | "output";
 /**
  * Every node type FlowForge knows about.
  *
- * The union is complete (all 13 types are part of the agreed data model), but the
+ * The union is complete (all 14 types are part of the agreed data model), but the
  * runtime registries in `lib/engine/registry.ts` and `components/nodes/registry.tsx`
  * only contain the types that are actually implemented. The palette renders from the
  * registry, so nothing unimplemented is ever reachable in the UI.
@@ -18,6 +18,7 @@ export type NodeType =
   | "trigger.schedule"
   // actions — one input, one or more outputs
   | "action.aiPrompt"
+  | "action.aiAgent"
   | "action.httpRequest"
   | "action.transform"
   | "action.condition"
@@ -61,6 +62,46 @@ export type AiPromptConfig = {
   model: AiModel;
   /** 0..1 — influences which canned response the simulator picks. */
   temperature: number;
+};
+
+export type AgentTool = "kbLookup" | "webSearch" | "calculator" | "httpFetch";
+
+export const AGENT_TOOLS: readonly {
+  id: AgentTool;
+  label: string;
+  description: string;
+}[] = [
+  {
+    id: "kbLookup",
+    label: "Knowledge Base",
+    description: "Search internal runbooks and policies",
+  },
+  {
+    id: "webSearch",
+    label: "Web Search",
+    description: "Query public company and domain signals",
+  },
+  {
+    id: "calculator",
+    label: "Calculator",
+    description: "Evaluate numeric formulas and thresholds",
+  },
+  {
+    id: "httpFetch",
+    label: "HTTP Fetch",
+    description: "Fetch live context from an enrichment endpoint",
+  },
+];
+
+export type AiAgentConfig = {
+  systemPrompt: string;
+  /** Goal template supporting {{variables}} resolved from the incoming payload. */
+  goal: string;
+  model: AiModel;
+  /** Simulated tools the agent may invoke while reasoning. */
+  tools: AgentTool[];
+  /** Upper bound on reasoning-act-observe iterations (1..6). */
+  maxSteps: number;
 };
 
 export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
@@ -125,6 +166,7 @@ export type NodeConfig =
   | WebhookTriggerConfig
   | ScheduleTriggerConfig
   | AiPromptConfig
+  | AiAgentConfig
   | HttpRequestConfig
   | TransformConfig
   | ConditionConfig
@@ -144,25 +186,27 @@ export type NodeConfigOf<T extends NodeType> = T extends "trigger.manual"
       ? ScheduleTriggerConfig
       : T extends "action.aiPrompt"
         ? AiPromptConfig
-        : T extends "action.httpRequest"
-          ? HttpRequestConfig
-          : T extends "action.transform"
-            ? TransformConfig
-            : T extends "action.condition"
-              ? ConditionConfig
-              : T extends "action.delay"
-                ? DelayConfig
-                : T extends "action.textFormatter"
-                  ? TextFormatterConfig
-                  : T extends "output.email"
-                    ? EmailConfig
-                    : T extends "output.slack"
-                      ? SlackConfig
-                      : T extends "output.sheets"
-                        ? SheetsConfig
-                        : T extends "output.log"
-                          ? LogConfig
-                          : never;
+        : T extends "action.aiAgent"
+          ? AiAgentConfig
+          : T extends "action.httpRequest"
+            ? HttpRequestConfig
+            : T extends "action.transform"
+              ? TransformConfig
+              : T extends "action.condition"
+                ? ConditionConfig
+                : T extends "action.delay"
+                  ? DelayConfig
+                  : T extends "action.textFormatter"
+                    ? TextFormatterConfig
+                    : T extends "output.email"
+                      ? EmailConfig
+                      : T extends "output.slack"
+                        ? SlackConfig
+                        : T extends "output.sheets"
+                          ? SheetsConfig
+                          : T extends "output.log"
+                            ? LogConfig
+                            : never;
 
 /* ------------------------------------------------------------------ *
  * React Flow node shape
@@ -195,6 +239,7 @@ export const NODE_CATEGORY: Record<NodeType, NodeCategory> = {
   "trigger.webhook": "trigger",
   "trigger.schedule": "trigger",
   "action.aiPrompt": "action",
+  "action.aiAgent": "action",
   "action.httpRequest": "action",
   "action.transform": "action",
   "action.condition": "action",

@@ -7,6 +7,7 @@ import {
   WebhookTriggerForm,
 } from "./trigger-forms";
 import {
+  AiAgentForm,
   AiPromptForm,
   ConditionForm,
   DelayForm,
@@ -30,6 +31,7 @@ export const CONFIG_FORMS: Readonly<Record<NodeType, FormComponent>> = {
   "trigger.webhook": WebhookTriggerForm as FormComponent,
   "trigger.schedule": ScheduleTriggerForm as FormComponent,
   "action.aiPrompt": AiPromptForm as FormComponent,
+  "action.aiAgent": AiAgentForm as FormComponent,
   "action.httpRequest": HttpRequestForm as FormComponent,
   "action.transform": TransformForm as FormComponent,
   "action.condition": ConditionForm as FormComponent,

@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import type { ExecutionSpeed } from "@/types/run";
+import type { NodeType } from "@/types/nodes";
 import { DEFAULT_SPEED } from "@/config/constants";
 
 /**
@@ -21,6 +22,8 @@ type UiState = {
   templatesOpen: boolean;
   showMinimap: boolean;
   speed: ExecutionSpeed;
+  /** Node types pinned to the top of the palette. */
+  favouriteNodes: NodeType[];
   /** True while a run is in flight; the Run button and palette lock during it. */
   isRunning: boolean;
   /** Progress of the localStorage / share-link hydration pass. */
@@ -31,6 +34,8 @@ type UiState = {
   setTemplatesOpen: (open: boolean) => void;
   setShowMinimap: (show: boolean) => void;
   setSpeed: (speed: ExecutionSpeed) => void;
+  toggleFavouriteNode: (type: NodeType) => void;
+  setFavouriteNodes: (types: NodeType[]) => void;
   setIsRunning: (running: boolean) => void;
   setHydration: (hydration: HydrationState) => void;
 };
@@ -45,6 +50,7 @@ export const useUiStore = create<UiState>((set) => ({
   templatesOpen: false,
   showMinimap: true,
   speed: DEFAULT_SPEED,
+  favouriteNodes: [],
   isRunning: false,
   hydration: "loading",
 
@@ -71,6 +77,14 @@ export const useUiStore = create<UiState>((set) => ({
   setTemplatesOpen: (templatesOpen) => set({ templatesOpen }),
   setShowMinimap: (showMinimap) => set({ showMinimap }),
   setSpeed: (speed) => set({ speed }),
+  toggleFavouriteNode: (type) =>
+    set((state) => ({
+      favouriteNodes: state.favouriteNodes.includes(type)
+        ? state.favouriteNodes.filter((entry) => entry !== type)
+        : [...state.favouriteNodes, type],
+    })),
+  setFavouriteNodes: (favouriteNodes) =>
+    set({ favouriteNodes: [...new Set(favouriteNodes)] }),
   setIsRunning: (isRunning) => set({ isRunning }),
   setHydration: (hydration) => set({ hydration }),
 }));
@@ -81,4 +95,8 @@ export function useIsRunning(): boolean {
 
 export function useSpeed(): ExecutionSpeed {
   return useUiStore((state) => state.speed);
+}
+
+export function useFavouriteNodes(): NodeType[] {
+  return useUiStore((state) => state.favouriteNodes);
 }

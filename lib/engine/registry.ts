@@ -25,6 +25,7 @@ import type { NodePayload } from "@/types/json";
 import type { NodeOutput, StepContext } from "./types";
 import { manualTrigger, scheduleTrigger, webhookTrigger } from "./node-defs/triggers";
 import {
+  aiAgent,
   aiPrompt,
   condition,
   delay,
@@ -107,6 +108,7 @@ const NODE_TYPES: readonly AnyNodeTypeDef[] = [
   webhookTrigger,
   scheduleTrigger,
   aiPrompt,
+  aiAgent,
   httpRequest,
   transform,
   condition,

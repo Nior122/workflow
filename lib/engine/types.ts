@@ -7,7 +7,7 @@
  */
 
 import type { NodePayload } from "@/types/json";
-import type { EngineEvent, ExecutionSpeed, RunError } from "@/types/run";
+import type { AgentTraceStep, EngineEvent, ExecutionSpeed, RunError } from "@/types/run";
 import type { VariableScope } from "./variables";
 
 export type StepContext = {
@@ -40,6 +40,8 @@ export type NodeOutput = {
   outputHandle?: "out" | "true" | "false";
   /** Executor-specific extras surfaced in the run console. */
   meta?: { [key: string]: NodePayload[string] };
+  /** Structured reasoning trace produced by an AI Agent node. */
+  trace?: AgentTraceStep[];
 };
 
 /** Thrown by an executor to fail the step with a structured error. */

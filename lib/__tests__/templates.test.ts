@@ -8,8 +8,8 @@ import { makeEffects, resetCounters } from "../engine/__tests__/helpers";
 beforeEach(resetCounters);
 
 describe("templates", () => {
-  it("ships at least four templates with unique ids", () => {
-    expect(TEMPLATES.length).toBeGreaterThanOrEqual(4);
+  it("ships all eight templates with unique ids", () => {
+    expect(TEMPLATES).toHaveLength(8);
     expect(new Set(TEMPLATES.map((template) => template.id)).size).toBe(TEMPLATES.length);
   });
 
@@ -80,5 +80,29 @@ describe("templates", () => {
     const second = template.build();
 
     expect(second.edges.map((edge) => edge.id)).toEqual(first.edges.map((edge) => edge.id));
+  });
+
+  it("emits a structured reasoning trace when running agent-powered templates", async () => {
+    for (const id of ["incident-response", "deal-desk-research"]) {
+      const template = getTemplate(id);
+      expect(template, `missing template ${id}`).toBeDefined();
+
+      const graph = template!.build();
+      const { effects } = makeEffects();
+      const result = await executeWorkflow({
+        runId: `run-${id}`,
+        workflowId: `wf-${id}`,
+        workflowName: template!.name,
+        nodes: graph.nodes,
+        edges: graph.edges,
+        speed: 2,
+        effects,
+        emit: () => {},
+      });
+
+      const agentSteps = result.steps.filter((entry) => entry.nodeType === "action.aiAgent");
+      expect(agentSteps.length).toBeGreaterThan(0);
+      expect(agentSteps[0].trace?.length).toBeGreaterThan(1);
+    }
   });
 });

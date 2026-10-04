@@ -10,17 +10,17 @@ const FEATURES = [
   {
     icon: Binary,
     title: "A real execution engine",
-    body: "Topological wave scheduling in pure TypeScript, isolated from React. Branching, merging, skip propagation and cycle detection — covered by 184 unit tests, not by hope.",
+    body: "Topological wave scheduling in pure TypeScript, isolated from React. Branching, merging, skip propagation and cycle detection — covered by 267 unit tests, not by hope.",
   },
   {
     icon: ScrollText,
     title: "Every payload, inspectable",
-    body: "The run console logs each step's exact JSON input and output, and keeps the last ten runs with their status and duration. That is the whole point of a flow tool.",
+    body: "The run console logs each step's exact JSON input and output, renders multi-step AI Agent reasoning traces, and keeps the last ten runs with their status and duration.",
   },
   {
     icon: ShieldCheck,
     title: "Nothing leaves your browser",
-    body: "Every integration is simulated — no API keys, no network calls. Workflows save to localStorage and share as a link that encodes the whole graph.",
+    body: "Every integration is simulated — 14 node types, 8 starter templates, no API keys, no network calls. Workflows save to localStorage and share as a link that encodes the whole graph.",
   },
 ] as const;
 

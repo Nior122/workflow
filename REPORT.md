@@ -14,13 +14,13 @@ Run from a clean `.next`:
 | --- | --- | --- |
 | Typecheck | `npx tsc --noEmit` | **0 errors** |
 | Lint | `npm run lint` | **0 errors, 0 warnings** |
-| Unit tests | `npx vitest run` | **242 passed / 15 files** |
+| Unit tests | `npx vitest run` | **267 passed / 16 files** |
 | Build | `npm run build` | **✓ compiled**, `/`, `/_not-found`, `/builder` all static |
 | Contrast | `npm run check:contrast` | **26/26 pass**, worst pair **4.64:1** |
 | Served | `curl /` and `curl /builder` | **200** and **200** |
 | CI | `.github/workflows/ci.yml` | runs all five of the above on every push and PR |
 
-Test count over the cycle: 184 → **242**. Files: 10 → **15**.
+Test count over the cycle: 184 → 242 → **267**. Files: 10 → 15 → **16**.
 
 ---
 

@@ -4,18 +4,25 @@ import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   AlertCircle,
+  Bot,
   Check,
   ChevronRight,
   CircleDashed,
   Copy,
   MinusCircle,
   Terminal,
+  Wrench,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { getNodeUi } from "@/components/nodes/registry";
 import { useRunStore, useRunStatus } from "@/store/runStore";
-import { statusLabel, type NodeRunStatus, type StepLog } from "@/types/run";
+import {
+  statusLabel,
+  type AgentTraceStep,
+  type NodeRunStatus,
+  type StepLog,
+} from "@/types/run";
 import { formatJson, type JsonValue } from "@/types/json";
 
 const STATUS_ICON: Record<NodeRunStatus, typeof Check> = {
@@ -206,6 +213,12 @@ function StepRow({
           </span>
         )}
 
+        {step.trace && step.trace.length > 0 && (
+          <span className="rounded-full border border-accent/35 bg-accent/10 px-2 py-1 font-mono text-[10px] text-accent">
+            {step.trace.length} {step.trace.length === 1 ? "thought" : "thoughts"}
+          </span>
+        )}
+
         <span className="shrink-0 font-mono text-[10px] text-muted-foreground tabular-nums">
           {new Date(step.startedAt).toLocaleTimeString([], {
             hour12: false,
@@ -244,6 +257,10 @@ function StepRow({
                 </p>
               )}
 
+              {step.trace && step.trace.length > 0 && (
+                <AgentTraceBlock trace={step.trace} />
+              )}
+
               <JsonBlock label="Input" value={step.input} />
 
               {step.output !== null && <JsonBlock label="Output" value={step.output} />}
@@ -256,6 +273,75 @@ function StepRow({
         )}
       </AnimatePresence>
     </li>
+  );
+}
+
+function AgentTraceBlock({ trace }: { trace: readonly AgentTraceStep[] }) {
+  const toolCalls = trace.filter((entry) => entry.tool !== null).length;
+
+  return (
+    <div aria-label="Agent reasoning trace">
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <span className="inline-flex items-center gap-1 text-[10px] font-medium tracking-wide text-muted-foreground uppercase">
+          <Bot className="size-3 text-accent" aria-hidden />
+          Reasoning trace
+        </span>
+        <span className="font-mono text-[10px] text-muted-foreground tabular-nums">
+          {trace.length} {trace.length === 1 ? "step" : "steps"} · {toolCalls}{" "}
+          {toolCalls === 1 ? "tool call" : "tool calls"}
+        </span>
+      </div>
+
+      <ol className="space-y-2">
+        {trace.map((entry) => (
+          <li
+            key={entry.step}
+            className="rounded-md border border-border bg-surface-raised px-3 py-2 text-xs"
+          >
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 font-mono text-[10px]">
+                <span className="rounded bg-surface px-2 py-1 text-muted-foreground">
+                  #{entry.step}
+                </span>
+                {entry.tool ? (
+                  <span className="inline-flex items-center gap-1 rounded border border-accent/35 bg-accent/10 px-2 py-1 text-accent">
+                    <Wrench className="size-2.5" aria-hidden />
+                    {entry.tool}
+                  </span>
+                ) : (
+                  <span className="rounded border border-success/35 bg-success/10 px-2 py-1 text-success">
+                    synthesis
+                  </span>
+                )}
+              </div>
+
+              <span className="font-mono text-[10px] text-muted-foreground tabular-nums">
+                {entry.durationMs}ms
+              </span>
+            </div>
+
+            <p className="mt-2 text-xs leading-relaxed text-foreground">
+              {entry.thought}
+            </p>
+
+            {(entry.toolInput || entry.observation) && (
+              <div className="mt-2 space-y-1 rounded border border-border/80 bg-surface px-2 py-2 font-mono text-[11px]">
+                {entry.toolInput && (
+                  <p className="text-muted-foreground">
+                    <span className="text-accent">call:</span> {entry.toolInput}
+                  </p>
+                )}
+                {entry.observation && (
+                  <p className="text-foreground">
+                    <span className="text-success">obs:</span> {entry.observation}
+                  </p>
+                )}
+              </div>
+            )}
+          </li>
+        ))}
+      </ol>
+    </div>
   );
 }
 

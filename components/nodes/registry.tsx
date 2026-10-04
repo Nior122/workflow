@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Bot,
   CalendarClock,
   Globe,
   GitBranch,
@@ -19,6 +20,7 @@ import {
 import { parseJsonObject } from "@/types/json";
 import { requireNodeDef } from "@/lib/engine/registry";
 import type {
+  AiAgentConfig,
   AiPromptConfig,
   ConditionConfig,
   DelayConfig,
@@ -65,6 +67,7 @@ export const ACCENTS = {
   "trigger.webhook": "#E0913D",
   "trigger.schedule": "#C9A227",
   "action.aiPrompt": "#FFA23A",
+  "action.aiAgent": "#FF7847",
   "action.httpRequest": "#FF6B35",
   "action.transform": "#F2884B",
   "action.condition": "#E4633F",
@@ -104,6 +107,11 @@ const SUMMARIES: Record<NodeType, Summary<NodeConfig>> = {
     config.promptTemplate.trim()
       ? truncate(config.promptTemplate)
       : "prompt template required") as Summary<NodeConfig>,
+
+  "action.aiAgent": ((config: AiAgentConfig) =>
+    config.goal.trim()
+      ? `${config.tools.length} tool${config.tools.length === 1 ? "" : "s"} · ${truncate(config.goal, 34)}`
+      : "goal required") as Summary<NodeConfig>,
 
   "action.httpRequest": ((config: HttpRequestConfig) =>
     config.url.trim()
@@ -149,6 +157,7 @@ const ICONS: Record<NodeType, LucideIcon> = {
   "trigger.webhook": Webhook,
   "trigger.schedule": CalendarClock,
   "action.aiPrompt": Sparkles,
+  "action.aiAgent": Bot,
   "action.httpRequest": Globe,
   "action.transform": Shuffle,
   "action.condition": GitBranch,

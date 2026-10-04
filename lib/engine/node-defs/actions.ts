@@ -8,7 +8,7 @@ import type { JsonValue } from "@/types/json";
 import type { ConditionOperator } from "@/types/nodes";
 import { defineNode } from "../registry";
 import { renderTemplate, resolveOperand, stringifyValue } from "../variables";
-import { simulateAiReply, simulateHttpResponse } from "../simulator";
+import { simulateAgentRun, simulateAiReply, simulateHttpResponse } from "../simulator";
 
 function filled(value: string): boolean {
   return value.trim().length > 0;
@@ -93,6 +93,84 @@ export const aiPrompt = defineNode<"action.aiPrompt">({
       meta: {
         prompt: prompt.text,
         unresolvedVariables: prompt.unresolved.join(", "),
+      },
+    };
+  },
+});
+
+export const aiAgent = defineNode<"action.aiAgent">({
+  type: "action.aiAgent",
+  category: "action",
+  title: "AI Agent",
+  description:
+    "Reasons in multi-step thought, tool, and observation loops and records a full trace.",
+  inputs: [{ id: "in", label: "Input" }],
+  outputs: [{ id: "out", label: "Output" }],
+  defaultConfig: {
+    systemPrompt:
+      "You are an autonomous operations agent. Verify facts with tools before answering.",
+    goal: "Investigate {{user.name}}'s request from {{source}} and recommend the next action.",
+    model: "ff-pro",
+    tools: ["kbLookup", "calculator"],
+    maxSteps: 3,
+  },
+  latencyMs: 1150,
+  requiredFields: ["goal"],
+  validateConfig: (config) => {
+    const issues: ConfigIssue[] = [];
+    if (!filled(config.goal)) {
+      issues.push(missing("config.goal", "Agent goal"));
+    }
+    if (!Number.isInteger(config.maxSteps) || config.maxSteps < 1 || config.maxSteps > 6) {
+      issues.push({
+        code: "invalid-config",
+        level: "error",
+        message: "Max steps must be a whole number between 1 and 6.",
+        field: "config.maxSteps",
+      });
+    }
+    return [
+      ...issues,
+      ...checkUnbalancedTokens("config.goal", config.goal),
+      ...checkUnbalancedTokens("config.systemPrompt", config.systemPrompt),
+    ];
+  },
+  execute: async (input, config, ctx) => {
+    const renderedGoal = renderTemplate(config.goal, ctx.scope);
+    const renderedSystem = renderTemplate(config.systemPrompt, ctx.scope);
+    const run = simulateAgentRun({
+      goal: renderedGoal.text,
+      systemPrompt: renderedSystem.text,
+      tools: config.tools,
+      maxSteps: config.maxSteps,
+      random: ctx.random,
+    });
+
+    const unresolved = [
+      ...renderedGoal.unresolved,
+      ...renderedSystem.unresolved,
+    ];
+
+    return {
+      payload: {
+        ...input,
+        text: run.answer,
+        agent: {
+          model: config.model,
+          answer: run.answer,
+          stepsUsed: run.steps.length,
+          toolsUsed: run.toolsUsed,
+          tokensIn: run.tokensIn,
+          tokensOut: run.tokensOut,
+          trace: run.steps,
+        },
+      },
+      trace: run.steps,
+      meta: {
+        goal: renderedGoal.text,
+        stepsUsed: run.steps.length,
+        toolsUsed: run.toolsUsed.join(", ") || "none",
+        unresolvedVariables: unresolved.join(", "),
       },
     };
   },

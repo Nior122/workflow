@@ -47,15 +47,16 @@ Planned captures (paths the script writes to):
 ## What it does
 
 **Canvas** — infinite pan/zoom, dotted grid, minimap, drag-from-palette *and* keyboard-add,
-connect via handles, multi-select, Delete to remove, ⌘/Ctrl+D to duplicate, ⌘/Ctrl+Z and
-⌘/Ctrl+⇧Z to undo/redo, and an auto-layout button that arranges the graph left to right.
+palette search with pinned favourites, connect via handles, multi-select, Delete to remove,
+⌘/Ctrl+D to duplicate, ⌘/Ctrl+Z and ⌘/Ctrl+⇧Z to undo/redo, and an auto-layout button that
+arranges the graph left to right.
 
-**13 node types**, each with its own icon, accent colour and config form:
+**14 node types**, each with its own icon, accent colour and config form:
 
 | Group | Nodes |
 | --- | --- |
 | Triggers *(no input)* | Manual (editable sample JSON) · Webhook (fake URL + sample payload) · Schedule (cron, fires once per run) |
-| Actions *(in → out)* | AI Prompt (`{{variables}}`, canned response) · HTTP Request (method/URL/headers → mock JSON) · Transform (key/value map or merge) · Filter (equals / notEquals / contains / gt / lt, two labelled `true`/`false` handles) · Delay · Text Formatter |
+| Actions *(in → out)* | AI Prompt (`{{variables}}`, canned response) · AI Agent (multi-step thought/tool/observation loop + reasoning trace) · HTTP Request (method/URL/headers → mock JSON) · Transform (key/value map or merge) · Filter (equals / notEquals / contains / gt / lt, two labelled `true`/`false` handles) · Delay · Text Formatter |
 | Outputs *(no output)* | Email · Slack · Google Sheets row · Log Output |
 
 **Execution** — topological wave scheduling, branching and merging, six node statuses
@@ -64,8 +65,9 @@ connect via handles, multi-select, Delete to remove, ⌘/Ctrl+D to duplicate, �
 Pre-run validation catches cycles, disconnected nodes, missing triggers and missing required
 config, and reports each issue **on the node that caused it**.
 
-**Templates** — four working flows with realistic sample data: Lead capture, Content
-repurposing, Invoice reminder, Support triage.
+**Templates** — eight working flows with realistic sample data: Lead capture, Content
+repurposing, Invoice reminder, Support triage, Incident response, Customer onboarding,
+Daily standup digest, and Deal desk research.
 
 **Save & share** — autosave, multiple named workflows, JSON import/export, and *Copy share
 link* which lz-string-compresses the graph into a `#flow=` URL hash.
@@ -122,7 +124,7 @@ app/            landing page + /builder
 components/     canvas · nodes · edges · panels · layout · ui
 lib/
   engine/       PURE — graph, validator, variables, executor, simulator, node-defs
-  templates/    the 4 built-in flows
+  templates/    the 8 built-in flows
   layout.ts     auto-layout (columns come from analyzeGraph waves)
   utils/        share.ts (lz-string), storage.ts (localStorage)
 store/          workflowStore · runStore · uiStore
@@ -198,26 +200,27 @@ prerenders `/`, `/_not-found` and `/builder` as static; `next start` then serves
 
 ## Testing
 
-**242 tests across 15 files.** They cover logic, not pixels — which is exactly what the pure
+**267 tests across 16 files.** They cover logic, not pixels — which is exactly what the pure
 engine boundary buys you.
 
 | File | Tests | Covers |
 | --- | --- | --- |
-| `lib/engine/__tests__/executor.test.ts` | 35 | wave scheduling, branching, merge semantics, skip propagation, failure simulation, mid-run cancellation, partial branch failure |
-| `lib/engine/__tests__/registry.test.ts` | 33 | node construction, handle rules, config defaults |
+| `lib/engine/__tests__/executor.test.ts` | 37 | wave scheduling, branching, merge semantics, skip propagation, failure simulation, mid-run cancellation, partial branch failure, AI Agent reasoning trace |
+| `lib/engine/__tests__/registry.test.ts` | 37 | node construction, handle rules, config defaults, AI Agent validation |
 | `store/__tests__/workflow-store-history.test.ts` | 32 | undo/redo, edit coalescing, duplicate, multi-workflow, run history |
+| `lib/__tests__/templates.test.ts` | 28 | all 8 templates validate, are acyclic, run to completion, and emit agent traces |
 | `lib/engine/__tests__/variables.test.ts` | 27 | `{{dot.path}}` resolution and precedence |
 | `lib/utils/__tests__/share.test.ts` | 15 | lz-string round-trip, corruption, schema rejection, hash stripping |
-| `lib/__tests__/templates.test.ts` | 15 | all 4 templates validate, are acyclic, and run to completion |
 | `store/__tests__/workflow-store.test.ts` | 14 | connection rules, delete, rename |
 | `components/layout/__tests__/shell-tracks.test.ts` | 13 | builder grid track widths and canvas space at 1024/1280/1440/1920 |
 | `lib/engine/__tests__/validator.test.ts` | 11 | cycles, missing triggers, unreachable nodes |
 | `lib/engine/__tests__/graph.test.ts` | 10 | topological waves, reachability |
+| `components/layout/__tests__/theme-provider.test.ts` | 9 | the pre-paint theme bootstrap and `adoptThemeIfUnset`, in a real jsdom |
 | `components/layout/__tests__/layout-contract.test.ts` | 8 | single z-index scale, canvas corner occupancy, grid child constraints |
 | `lib/__tests__/layout.test.ts` | 8 | column ordering, determinism, cyclic-graph safety |
 | `hooks/__tests__/validation-patch.test.ts` | 8 | the validation patch converges instead of looping |
+| `components/panels/__tests__/palette-filter.test.ts` | 6 | palette search matching and pinned favourite node types |
 | `store/__tests__/run-state-isolation.test.ts` | 4 | run state does not leak between workflows |
-| `components/layout/__tests__/theme-provider.test.ts` | 9 | the pre-paint theme bootstrap and `adoptThemeIfUnset`, in a real jsdom |
 
 **Six of these are negative-controlled** — the fix was deliberately reverted, the tests
 confirmed to fail, then the fix restored: `validation-patch` (2 failures), the coalescing

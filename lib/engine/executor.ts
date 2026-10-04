@@ -229,6 +229,7 @@ export async function executeWorkflow(options: ExecuteOptions): Promise<RunResul
         input,
         output: result.payload,
         ...(result.meta ? { meta: result.meta } : {}),
+        ...(result.trace ? { trace: result.trace } : {}),
       });
 
       activateOutgoing(node, result.outputHandle ?? "out", endedAt);

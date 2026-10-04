@@ -1,5 +1,5 @@
 import type { NodePayload } from "./json";
-import type { NodeType } from "./nodes";
+import type { AgentTool, NodeType } from "./nodes";
 import { EXECUTION_SPEEDS } from "@/config/constants";
 
 export type NodeRunStatus =
@@ -37,6 +37,16 @@ export type RunError = {
   nodeId?: string;
 };
 
+/** One reasoning-act-observe iteration produced by an AI Agent node. */
+export type AgentTraceStep = {
+  step: number;
+  thought: string;
+  tool: AgentTool | null;
+  toolInput: string | null;
+  observation: string | null;
+  durationMs: number;
+};
+
 /** One row in the run console; expandable to reveal exact input/output JSON. */
 export type StepLog = {
   stepId: string;
@@ -52,6 +62,8 @@ export type StepLog = {
   error?: RunError;
   /** Executor-specific extras: branch taken, mock HTTP status, rows written… */
   meta?: { [key: string]: NodePayload[string] };
+  /** Structured reasoning trace when the step is an AI Agent node. */
+  trace?: AgentTraceStep[];
 };
 
 /** A payload that moved along an edge, used to schedule the particle animation. */

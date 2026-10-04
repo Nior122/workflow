@@ -64,6 +64,7 @@ export function usePersistence(): void {
       useUiStore.setState({
         speed: loaded.state.settings.speed,
         showMinimap: loaded.state.settings.showMinimap,
+        favouriteNodes: loaded.state.settings.favouriteNodes ?? [],
         hydration: "ready",
       });
       useRunStore.setState({ history: loaded.state.runHistory });
@@ -88,6 +89,7 @@ export function usePersistence(): void {
   const workflowName = useWorkflowStore((state) => state.workflowName);
   const viewport = useWorkflowStore((state) => state.viewport);
   const runHistory = useWorkflowStore((state) => state.runHistory);
+  const favouriteNodes = useUiStore((state) => state.favouriteNodes);
 
   useEffect(() => {
     if (hydration !== "ready") return;
@@ -103,6 +105,7 @@ export function usePersistence(): void {
           speed: useUiStore.getState().speed,
           snapToGrid: false,
           showMinimap: useUiStore.getState().showMinimap,
+          favouriteNodes: useUiStore.getState().favouriteNodes,
         },
       });
 
@@ -123,7 +126,7 @@ export function usePersistence(): void {
     }, SAVE_DEBOUNCE_MS);
 
     return () => clearTimeout(timer);
-  }, [nodes, edges, workflows, workflowName, viewport, runHistory, hydration]);
+  }, [nodes, edges, workflows, workflowName, viewport, runHistory, favouriteNodes, hydration]);
 }
 
 /** Parse a share link if the URL carries one, laying the graph out on arrival. */

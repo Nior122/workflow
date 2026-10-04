@@ -10,10 +10,10 @@ import { useNodeStatus } from "@/store/runStore";
 import type { FlowNode, NodeType } from "@/types/nodes";
 
 /**
- * One node component for all thirteen types.
+ * One node component for all fourteen types.
  *
  * Every node type renders the same chrome with different metadata, so a factory
- * parameterised by NodeType beats thirteen near-identical files. `createNodeComponent`
+ * parameterised by NodeType beats fourteen near-identical files. `createNodeComponent`
  * closes over the type, keeping React Flow's `nodeTypes` map static and memo-safe.
  */
 export function createNodeComponent(type: NodeType) {

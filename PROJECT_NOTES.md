@@ -3,11 +3,11 @@
 > **Living document.** Re-read this file at the start of every phase. Update it at the end of
 > every phase (tick the phase, list files, record decisions, list known issues).
 >
-> Status: **COMPLETE.** Build phases 1–8 and QA phases 1–5 are all done. The QA summary is
+> Status: **COMPLETE.** Build phases 1–9 and QA phases 1–5 are all done. The QA summary is
 > **`REPORT.md`**; the issue-by-issue audit log with root causes and evidence is
 > **`FIXES.md`**.
-> Branch `arena/01a102bb-workflow`. Final gate, from a clean `.next`: `tsc --noEmit` 0,
-> `eslint` 0/0, **242 unit tests / 15 files**, `npm run check:contrast` 26/26 (worst
+> Branch `arena/01a1052c-workflow`. Final gate, from a clean `.next`: `tsc --noEmit` 0,
+> `eslint` 0/0, **267 unit tests / 16 files**, `npm run check:contrast` 26/26 (worst
 > 4.64:1), `next build` (3 static routes), `GET /` and `GET /builder` both 200.
 > **No browser exists in this sandbox**, so nothing has been visually verified and the
 > Phase 5 screenshots could not be taken — see `REPORT.md` §2.
