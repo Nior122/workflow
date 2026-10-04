@@ -6,14 +6,20 @@
  * deterministically with no real timers and no flaky canned-response selection.
  */
 
-import type { NodePayload } from "@/types/json";
+import type { JsonObject, NodePayload } from "@/types/json";
 import type { AgentTraceStep, EngineEvent, ExecutionSpeed, RunError } from "@/types/run";
+import type { ConnectedSubNodes, FlowItem, TokenUsageSummary } from "@/types/registry";
 import type { VariableScope } from "./variables";
 
 export type StepContext = {
   nodeId: string;
+  nodeLabel?: string;
   /** Variable scope for this step: merged input plus all finished upstream outputs. */
   scope: VariableScope;
+  /** Incoming items in n8n-style `[{ json }]` form. */
+  items?: readonly FlowItem[];
+  /** Connected AI sub-nodes (`ai_model`, `ai_memory`, `ai_tool`) when executing an AI Agent. */
+  subNodes?: ConnectedSubNodes;
   /** Simulated latency for this node, already divided by the speed multiplier. */
   latencyMs: number;
   /** Injected delay. Delay nodes use this for their extra wait. */
@@ -30,18 +36,40 @@ export type EngineEffects = {
   sleep: (ms: number) => Promise<void>;
   now: () => number;
   random: () => number;
+  /**
+   * Optional interactive approval gate callback used by the browser UI when a
+   * `logic.waitForApproval` node executes. In headless unit tests where this is
+   * omitted, approval resolves immediately.
+   */
+  requestApproval?: (request: {
+    nodeId: string;
+    nodeLabel: string;
+    summary: string;
+    details?: JsonObject;
+  }) => Promise<boolean>;
 };
 
 export type EmitEvent = (event: EngineEvent) => void;
 
 export type NodeOutput = {
   payload: NodePayload;
-  /** For condition nodes: which output handle the data leaves through. */
-  outputHandle?: "out" | "true" | "false";
+  /** Which output handle the data leaves through (`"out"`, `"true"`, `"false"`, `"case_0"`, etc.). */
+  outputHandle?: string;
   /** Executor-specific extras surfaced in the run console. */
   meta?: { [key: string]: NodePayload[string] };
   /** Structured reasoning trace produced by an AI Agent node. */
   trace?: AgentTraceStep[];
+  /** Human-readable log lines emitted by the node's simulator. */
+  logs?: string[];
+  /** Simulated token and cost metrics for AI nodes. */
+  tokenUsage?: TokenUsageSummary;
+  /** Number of items emitted by this node (`1`, `3`, etc.). */
+  itemCount?: number;
+  /** Optional interactive approval prompt metadata. */
+  pauseForApproval?: {
+    summary: string;
+    details?: JsonObject;
+  };
 };
 
 /** Thrown by an executor to fail the step with a structured error. */

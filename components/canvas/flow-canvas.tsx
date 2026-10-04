@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import {
   Background,
   BackgroundVariant,
   MiniMap,
   ReactFlow,
   ConnectionMode,
+  useReactFlow,
 } from "@xyflow/react";
 import { nodeTypes } from "@/components/nodes";
 import { edgeTypes } from "@/components/edges";
@@ -14,13 +15,22 @@ import { cn } from "@/lib/utils";
 import { ZoomControls } from "./zoom-controls";
 import { EmptyCanvas } from "./empty-canvas";
 import { ConnectionErrorToast } from "./connection-error-toast";
+import { QuickAddPopover } from "./quick-add-popover";
+import { ApprovalBanner } from "./approval-banner";
+import { AgentTraceDrawer } from "./agent-trace-drawer";
 import { useCanvasElement } from "./canvas-context";
 import { useViewportTier } from "@/hooks/use-viewport-tier";
 import { useCanvasDrop } from "@/hooks/use-canvas-actions";
 import { getNodeUi } from "@/components/nodes/registry";
 import { useIsEmptyCanvas, useWorkflowStore } from "@/store/workflowStore";
 import { useUiStore } from "@/store/uiStore";
-import { GRID_DOT_SIZE, GRID_GAP, MAX_ZOOM, MIN_ZOOM } from "@/config/constants";
+import {
+  GRID_DOT_SIZE,
+  GRID_GAP,
+  MAX_ZOOM,
+  MIN_ZOOM,
+  PANE_DOUBLE_CLICK_MS,
+} from "@/config/constants";
 import type { NodeType } from "@/types/nodes";
 import type { Viewport } from "@/types/workflow";
 
@@ -54,6 +64,8 @@ export function FlowCanvas({ minimapVisible }: { minimapVisible: boolean }) {
 
   const canvasRef = useCanvasElement();
   const { onDragOver, onDrop } = useCanvasDrop();
+  const openQuickAdd = useUiStore((state) => state.openQuickAdd);
+  const { screenToFlowPosition } = useReactFlow();
 
   const defaultEdgeOptions = useMemo(
     () => ({ type: "animated-flow" as const, data: { active: false } }),
@@ -63,6 +75,27 @@ export function FlowCanvas({ minimapVisible }: { minimapVisible: boolean }) {
   const handleMoveEnd = useCallback(
     (_event: unknown, viewport: Viewport) => setViewport(viewport),
     [setViewport],
+  );
+
+  // Double-clicking empty canvas opens the quick-add command popup at that spot.
+  // React Flow has no `onPaneDoubleClick`, so `onPaneClick` is paired with a short
+  // timer: two clicks inside PANE_DOUBLE_CLICK_MS count as one double-click.
+  const lastPaneClickAt = useRef(0);
+  const handlePaneClick = useCallback(
+    (event: React.MouseEvent) => {
+      const now = Date.now();
+      if (now - lastPaneClickAt.current > PANE_DOUBLE_CLICK_MS) {
+        lastPaneClickAt.current = now;
+        return;
+      }
+      lastPaneClickAt.current = 0;
+      const position = screenToFlowPosition({
+        x: event.clientX,
+        y: event.clientY,
+      });
+      openQuickAdd({ position });
+    },
+    [openQuickAdd, screenToFlowPosition],
   );
 
   return (
@@ -77,9 +110,11 @@ export function FlowCanvas({ minimapVisible }: { minimapVisible: boolean }) {
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         onNodeClick={handleNodeClick}
+        onPaneClick={handlePaneClick}
         onDragOver={onDragOver}
         onDrop={onDrop}
         onMoveEnd={handleMoveEnd}
+        proOptions={{ hideAttribution: false }}
         connectionMode={CONNECTION_MODE}
         deleteKeyCode={["Backspace", "Delete"]}
         multiSelectionKeyCode={["Meta", "Shift", "Control"]}
@@ -129,7 +164,13 @@ export function FlowCanvas({ minimapVisible }: { minimapVisible: boolean }) {
 
       {isEmpty && <EmptyCanvas />}
 
+      <QuickAddPopover />
+
+      <ApprovalBanner />
+
       <ConnectionErrorToast />
+
+      <AgentTraceDrawer />
 
       {/* Canvas state is otherwise purely visual; keep it available to screen readers. */}
       <p className="sr-only" aria-live="polite">

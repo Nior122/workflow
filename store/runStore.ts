@@ -16,6 +16,13 @@ export type ActiveEdge = {
   toNodeId: string;
 };
 
+/** Per-edge telemetry from the most recent run (item counts, throughput). */
+export type EdgeTelemetry = {
+  itemCount: number;
+  fromNodeId: string;
+  toNodeId: string;
+};
+
 type RunState = {
   status: RunStatus;
   currentRunId: string | null;
@@ -23,6 +30,8 @@ type RunState = {
   nodeStatuses: Record<string, NodeRunStatus>;
   /** Edges currently carrying a payload, drives the particle animation. */
   activeEdges: Record<string, ActiveEdge>;
+  /** Item counts per edge from the last run — renders the `3 items` badge. */
+  edgeTelemetry: Record<string, EdgeTelemetry>;
   /** Steps of the run in progress. */
   steps: StepLog[];
   /** Last RUN_HISTORY_LIMIT runs, newest first. */
@@ -47,6 +56,7 @@ export const useRunStore = create<RunState>((set) => ({
   currentRunId: null,
   nodeStatuses: {},
   activeEdges: {},
+  edgeTelemetry: {},
   steps: [],
   history: [],
   expandedSteps: [],
@@ -59,6 +69,7 @@ export const useRunStore = create<RunState>((set) => ({
       steps: [],
       expandedSteps: [],
       activeEdges: {},
+      edgeTelemetry: {},
       blockingMessage: null,
       nodeStatuses: Object.fromEntries(
         queuedNodeIds.map((id) => [id, "queued" as NodeRunStatus]),
@@ -103,6 +114,14 @@ export const useRunStore = create<RunState>((set) => ({
                 toNodeId: event.toNodeId,
               },
             },
+            edgeTelemetry: {
+              ...state.edgeTelemetry,
+              [event.edgeId]: {
+                itemCount: event.itemCount ?? 1,
+                fromNodeId: event.fromNodeId,
+                toNodeId: event.toNodeId,
+              },
+            },
           };
 
         case "run:end":
@@ -116,6 +135,16 @@ export const useRunStore = create<RunState>((set) => ({
       currentRunId: null,
       steps: result.steps,
       activeEdges: {},
+      edgeTelemetry: Object.fromEntries(
+        result.edges.map((transition) => [
+          transition.edgeId,
+          {
+            itemCount: transition.itemCount ?? 1,
+            fromNodeId: transition.fromNodeId,
+            toNodeId: transition.toNodeId,
+          },
+        ]),
+      ),
       history: [result, ...state.history].slice(0, RUN_HISTORY_LIMIT),
       // Auto-expand the first failing step so the reason is immediately visible.
       expandedSteps: (() => {
@@ -125,7 +154,14 @@ export const useRunStore = create<RunState>((set) => ({
     })),
 
   resetStatuses: () =>
-    set(() => ({ status: "idle", nodeStatuses: {}, activeEdges: {}, steps: [], currentRunId: null })),
+    set(() => ({
+      status: "idle",
+      nodeStatuses: {},
+      activeEdges: {},
+      edgeTelemetry: {},
+      steps: [],
+      currentRunId: null,
+    })),
 
   toggleStep: (stepId) =>
     set((state) => ({
@@ -155,6 +191,10 @@ export function useIsEdgeActive(edgeId: string): boolean {
 
 export function useEdgeAnimation(edgeId: string): ActiveEdge | undefined {
   return useRunStore((state) => state.activeEdges[edgeId]);
+}
+
+export function useEdgeTelemetry(edgeId: string): EdgeTelemetry | undefined {
+  return useRunStore((state) => state.edgeTelemetry[edgeId]);
 }
 
 export function useRunStatus(): RunStatus {

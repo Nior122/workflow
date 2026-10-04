@@ -5,17 +5,11 @@
  * independent node objects rather than shared references.
  */
 
-import { buildEdge, buildNode, type BuiltGraph } from "@/lib/graph-builder";
+import { buildEdge, buildNode } from "@/lib/graph-builder";
+import { SHOWCASE_TEMPLATES } from "./showcase";
+import { sortTags, type Template } from "./types";
 
-export type Template = {
-  id: string;
-  name: string;
-  description: string;
-  /** Short label shown on the gallery card. */
-  category: string;
-  nodeCount: number;
-  build: () => BuiltGraph;
-};
+export { filterTemplates, sortTags, type Template } from "./types";
 
 const LEAD_PAYLOAD = JSON.stringify(
   {
@@ -34,6 +28,7 @@ const leadCapture: Template = {
   description:
     "A webhook receives a lead, a filter keeps only budgets over 500, an AI node drafts the reply, then it goes out by email and posts to Slack.",
   category: "Sales",
+  tags: ["sales", "ai", "email"],
   nodeCount: 5,
   build: () => ({
     nodes: [
@@ -76,6 +71,7 @@ const contentRepurposing: Template = {
   description:
     "Start it yourself with a topic, let the AI draft a post, format it into a platform-ready string, and print the result to the console.",
   category: "Content",
+  tags: ["content", "ai"],
   nodeCount: 4,
   build: () => ({
     nodes: [
@@ -113,6 +109,7 @@ const invoiceReminder: Template = {
   description:
     "A schedule fires, an HTTP node fetches overdue invoices from a mock API, a filter keeps the ones over 30 days, and an email goes out.",
   category: "Finance",
+  tags: ["finance", "automation"],
   nodeCount: 4,
   build: () => ({
     nodes: [
@@ -152,6 +149,7 @@ const supportTriage: Template = {
   description:
     "An inbound ticket is classified by the AI node, then routed: billing tickets go to Slack, everything else is logged to a sheet for review.",
   category: "Support",
+  tags: ["support", "ai", "agent"],
   nodeCount: 5,
   build: () => ({
     nodes: [
@@ -205,6 +203,7 @@ const incidentResponse: Template = {
   description:
     "An alert webhook checks error-rate thresholds; high-error incidents trigger an AI Agent that consults runbooks and live metrics before paging Slack.",
   category: "DevOps",
+  tags: ["devops", "alerts", "agent"],
   nodeCount: 5,
   build: () => ({
     nodes: [
@@ -254,6 +253,7 @@ const customerOnboarding: Template = {
   description:
     "Maps a new signup into onboarding metadata, waits a beat, drafts a tailored welcome note with AI, and sends the onboarding email.",
   category: "Growth",
+  tags: ["customer-success", "automation"],
   nodeCount: 5,
   build: () => ({
     nodes: [
@@ -304,6 +304,7 @@ const dailyStandupDigest: Template = {
   description:
     "Fires every weekday morning, fetches the engineering activity summary from a mock API, formats a digest, and posts it to Slack.",
   category: "Ops",
+  tags: ["ops", "schedule", "ai"],
   nodeCount: 4,
   build: () => ({
     nodes: [
@@ -341,6 +342,7 @@ const dealDeskResearch: Template = {
   description:
     "An enterprise quote webhook runs an AI Agent across web search, calculator, and policy lookup, then logs the approval memo to Sheets and emails the rep.",
   category: "Sales",
+  tags: ["sales", "ai", "agent"],
   nodeCount: 5,
   build: () => ({
     nodes: [
@@ -399,7 +401,8 @@ const dealDeskResearch: Template = {
   }),
 };
 
-export const TEMPLATES: readonly Template[] = [
+/** The eight original core templates, kept first so the gallery order stays stable. */
+export const CORE_TEMPLATES: readonly Template[] = [
   leadCapture,
   contentRepurposing,
   invoiceReminder,
@@ -409,6 +412,14 @@ export const TEMPLATES: readonly Template[] = [
   dailyStandupDigest,
   dealDeskResearch,
 ];
+
+/** The complete gallery: core templates followed by the 144-node showcase set. */
+export const TEMPLATES: readonly Template[] = [...CORE_TEMPLATES, ...SHOWCASE_TEMPLATES];
+
+/** Every distinct tag in the gallery, alphabetically — drives the filter chips. */
+export const TEMPLATE_TAGS: readonly string[] = sortTags(
+  TEMPLATES.flatMap((template) => template.tags),
+);
 
 export function getTemplate(id: string): Template | undefined {
   return TEMPLATES.find((template) => template.id === id);

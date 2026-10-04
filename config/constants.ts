@@ -20,6 +20,9 @@ export const NODE_WIDTH = 240;
 export const NODE_DRAG_TYPE = "application/flowforge-node";
 
 export const DEFAULT_VIEWPORT = { x: 0, y: 0, zoom: 1 } as const;
+/** Max gap between two canvas clicks that still counts as a double-click (ms). */
+export const PANE_DOUBLE_CLICK_MS = 320;
+
 export const MIN_ZOOM = 0.15;
 export const MAX_ZOOM = 2.5;
 

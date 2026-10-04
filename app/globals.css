@@ -232,6 +232,22 @@
       hsl(var(--accent-hot)) 100%
     );
   }
+
+  /*
+   * Lazy row rendering for long lists (the 144-node palette is the main user).
+   * `content-visibility: auto` lets the browser skip layout and paint for rows
+   * that are off-screen; `contain-intrinsic-size` keeps the scrollbar stable and
+   * stops the list from jumping as rows materialize.
+   */
+  .ff-lazy-row {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 48px;
+  }
+
+  /* Scroll container that scrolls an over-long child rather than growing. */
+  .ff-scroll {
+    overscroll-behavior: contain;
+  }
 }
 
 /* ---- React Flow overrides so the canvas matches the theme ---- */

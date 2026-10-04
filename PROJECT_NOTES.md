@@ -1246,3 +1246,66 @@ plus `ResizeObserver` shims, which is more machinery than the two lines it would
 are one click to verify by hand (`REPORT.md` §6, steps 8 and 11).
 
 **Test count 233 → 242** (15 files).
+
+
+### 144-Node Library & AI Agent Expansion (COMPLETE)
+
+The builder went from **14 node types to 144** while keeping every architectural invariant:
+the engine boundary, the 4px spacing grid, the single z-index scale, and 100% theme contrast.
+
+**What shipped, phase by phase**
+
+1. **Architecture.** One declarative definition per node in `/lib/nodes/<category>/`
+   (`triggers/` 33, `messaging/` 18, `data/` 13, `business/` 16, `logic/` 27-ish, `ai/` 37) with
+   `id`, `label`, `description`, `category`, `subcategory`, `keywords`, `icon` (a *serialisable
+   string* like `"brand:whatsapp"`), `accent`, `kind`, typed `inputs`/`outputs`
+   (`main | ai_model | ai_memory | ai_tool`), `configSchema`, `defaultConfig`, `sampleOutput`,
+   and a pure `simulate(input, config, ctx)`. `lib/nodes/validate-registry.ts` runs at build
+   time *and* in tests: missing keys, duplicate ids, unrenderable icons and unusable schemas
+   all fail the suite. Credentials are simulated (`lib/nodes/credentials.ts`) with a picker and
+   a fake OAuth "Connect account" dialog.
+2. **Palette.** Search across label/description/keywords with a `/` shortcut, collapsible
+   category accordions with counts, Recently used + Favourites, and a quick-add popover on
+   canvas double-click or a node's `+` handle that auto-connects.
+3. **Node library.** Batches A–F (33/18/13/16/27/37). Every node has a working form, a sample
+   output, and a simulation that runs — asserted by executing all 144 through the real engine.
+4. **AI Agent system.** Bottom sub-node ports (`ai_model` ×1, `ai_memory` ×1, `ai_tool` ×n) with
+   compatibility validation and a toast on an illegal drop; compact sub-node chrome; keyword
+   ranking for tool selection; a live reasoning trace in the console plus a side drawer;
+   animated active tool edges; nested multi-agent delegation via `aiTool.callAgent`; and
+   simulated token usage + cost per step and per run.
+5. **Engine.** Multiple outputs (Switch `case_0..2` + `fallback`, Loop `loop`/`done`, error
+   branches), merge modes, per-item iteration with progress, a pausing human-approval gate,
+   sub-workflow execution, per-node "continue on error" and "retry on fail", n8n-style item
+   arrays with edge item-count badges, and an expression editor (`{{ $json.x }}`,
+   `{{ $node["Name"].json.x }}`, helpers, autocomplete, live preview).
+6. **Templates.** 16 total — the original 8 plus 8 showcases (AI support agent with tools, RAG
+   knowledge base, Switch order fulfilment, per-item invoice chase, multi-agent content studio,
+   payment reconciliation, deploy watchdog, recruiting triage). Every template carries tags and
+   the gallery filters by tag (chips) and by free-text search.
+7. **Polish.** Landing page reads its own counts from the registry ("144 node types · 90+
+   integrations · 16 templates"), the footer carries a brand disclaimer, and the whole gate
+   (`tsc`, `lint`, `test`, `check:contrast`, `build`) runs clean.
+
+**Two things worth knowing about the implementation**
+
+- **The bridge, not a rewrite.** The original 14 nodes keep their ids and config shapes; they
+  now live in the registry and are adapted back into `AnyNodeTypeDef` by
+  `lib/engine/registry.ts`. A workflow saved before this work loads, validates and runs
+  unchanged — there is no migration step because there was nothing to migrate.
+- **`agent-simulate.ts` is the single source of agent truth.** Pricing, tool-keyword ranking and
+  the reasoning loop live in one pure module used by both the declarative `action.aiAgent`
+  definition and the engine's core node, so the two paths cannot drift. Token counting therefore
+  works identically whether a node is reached through the registry bridge or the legacy path.
+
+**Verification.** `lib/nodes/__tests__/registry-144.test.ts` (9 tests) asserts the 144 count, a
+clean registry validation across all entries, keyword search, "every node executes", sub-node
+handle rules, an AI Agent run with a nested trace, Switch routing, continue-on-error + retry,
+and expression resolution. `lib/__tests__/templates.test.ts` now covers 16 templates ×
+(valid → acyclic → runs to completion).
+
+**Caveat, stated plainly:** all 144 nodes are *simulated* — deterministic faker-backed payloads,
+no network. A node being "tested" means it executes end to end through the engine and produces
+the documented shape; it does **not** mean it has ever talked to the real Slack, Stripe or
+WhatsApp API. That is the point of the project, but it should not be mistaken for integration
+coverage.

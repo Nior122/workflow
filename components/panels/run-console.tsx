@@ -9,7 +9,9 @@ import {
   ChevronRight,
   CircleDashed,
   Copy,
+  Coins,
   MinusCircle,
+  ScrollText,
   Terminal,
   Wrench,
 } from "lucide-react";
@@ -21,8 +23,10 @@ import {
   statusLabel,
   type AgentTraceStep,
   type NodeRunStatus,
+  type RunResult,
   type StepLog,
 } from "@/types/run";
+import type { TokenUsageSummary } from "@/types/registry";
 import { formatJson, type JsonValue } from "@/types/json";
 
 const STATUS_ICON: Record<NodeRunStatus, typeof Check> = {
@@ -79,6 +83,8 @@ export function RunConsole() {
             {source === "previous" && " · last run"}
           </span>
         )}
+
+        <RunUsageTotals result={latest} />
 
         <div className="ml-auto flex items-center gap-2">
           {expanded.length > 0 && (
@@ -219,6 +225,21 @@ function StepRow({
           </span>
         )}
 
+        {step.itemCount !== undefined && step.itemCount > 1 && (
+          <span className="rounded-full border border-border bg-surface-raised px-2 py-1 font-mono text-[10px] text-muted-foreground tabular-nums">
+            {step.itemCount} items
+          </span>
+        )}
+
+        {step.tokenUsage && (
+          <span
+            className="rounded-full border border-accent/35 bg-accent/10 px-2 py-1 font-mono text-[10px] text-accent tabular-nums"
+            title={`${step.tokenUsage.promptTokens} prompt + ${step.tokenUsage.completionTokens} completion tokens`}
+          >
+            {formatTokens(step.tokenUsage.totalTokens)} tok
+          </span>
+        )}
+
         <span className="shrink-0 font-mono text-[10px] text-muted-foreground tabular-nums">
           {new Date(step.startedAt).toLocaleTimeString([], {
             hour12: false,
@@ -261,6 +282,10 @@ function StepRow({
                 <AgentTraceBlock trace={step.trace} />
               )}
 
+              {step.tokenUsage && <TokenUsageBlock usage={step.tokenUsage} />}
+
+              {step.logs && step.logs.length > 0 && <LogLines lines={step.logs} />}
+
               <JsonBlock label="Input" value={step.input} />
 
               {step.output !== null && <JsonBlock label="Output" value={step.output} />}
@@ -273,6 +298,87 @@ function StepRow({
         )}
       </AnimatePresence>
     </li>
+  );
+}
+
+/** `1234` → `1.2k`, so a long run stays readable in the console header. */
+export function formatTokens(tokens: number): string {
+  if (tokens < 1000) return String(tokens);
+  return `${(tokens / 1000).toFixed(1)}k`;
+}
+
+/** `$0.003120` → `$0.0031`; tiny amounts keep four decimals instead of rounding to $0. */
+export function formatUsd(usd: number): string {
+  if (usd === 0) return "$0";
+  if (usd < 0.01) return `$${usd.toFixed(4)}`;
+  return `$${usd.toFixed(2)}`;
+}
+
+/** Run-level totals: silent until an AI node actually reports usage. */
+function RunUsageTotals({ result }: { result: RunResult | undefined }) {
+  if (!result || !result.totalTokens) return null;
+
+  return (
+    <span
+      className="inline-flex items-center gap-1 rounded-full border border-accent/35 bg-accent/10 px-2 py-1 font-mono text-[10px] text-accent tabular-nums"
+      title="Simulated token usage and estimated LLM cost for this run"
+    >
+      <Coins className="size-2.5" aria-hidden />
+      {formatTokens(result.totalTokens)} tokens · {formatUsd(result.estimatedCostUsd ?? 0)}
+    </span>
+  );
+}
+
+/** Per-step token/cost breakdown shown when a step is expanded. */
+function TokenUsageBlock({ usage }: { usage: TokenUsageSummary }) {
+  return (
+    <div aria-label="Token usage">
+      <span className="mb-2 inline-flex items-center gap-1 text-[10px] font-medium tracking-wide text-muted-foreground uppercase">
+        <Coins className="size-3 text-accent" aria-hidden />
+        Token usage
+      </span>
+
+      <dl className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <UsageTile label="Model" value={usage.model} />
+        <UsageTile label="Prompt" value={`${usage.promptTokens} tok`} />
+        <UsageTile label="Completion" value={`${usage.completionTokens} tok`} />
+        <UsageTile label="Est. cost" value={formatUsd(usage.estimatedCostUsd)} />
+      </dl>
+    </div>
+  );
+}
+
+function UsageTile({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-md border border-border bg-surface-raised px-3 py-2">
+      <dt className="text-[10px] tracking-wide text-muted-foreground uppercase">{label}</dt>
+      <dd className="truncate font-mono text-xs text-foreground tabular-nums" title={value}>
+        {value}
+      </dd>
+    </div>
+  );
+}
+
+/** Raw log lines a node's simulator emitted, newest last. */
+function LogLines({ lines }: { lines: readonly string[] }) {
+  return (
+    <div aria-label="Step logs">
+      <span className="mb-2 inline-flex items-center gap-1 text-[10px] font-medium tracking-wide text-muted-foreground uppercase">
+        <ScrollText className="size-3 text-muted-foreground" aria-hidden />
+        Logs
+      </span>
+
+      <ul className="space-y-1 rounded-md border border-border bg-surface-raised px-3 py-2 font-mono text-[11px] leading-relaxed">
+        {lines.map((line, index) => (
+          <li key={`${index}-${line}`} className="flex gap-2 text-muted-foreground">
+            <span aria-hidden className="select-none text-accent">
+              ›
+            </span>
+            <span className="min-w-0 break-words text-foreground">{line}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 

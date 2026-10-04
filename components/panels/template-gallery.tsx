@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { ArrowRight, LayoutTemplate, Sparkles } from "lucide-react";
+import { ArrowRight, LayoutTemplate, Search, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,9 +13,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { autoLayout } from "@/lib/layout";
-import { TEMPLATES, type Template } from "@/lib/templates";
+import { TEMPLATES, TEMPLATE_TAGS, filterTemplates, type Template } from "@/lib/templates";
 import { useWorkflowStore } from "@/store/workflowStore";
 import { useRunStore } from "@/store/runStore";
+import { TextInput } from "@/components/nodes/forms/fields";
 
 /**
  * Template gallery.
@@ -35,6 +36,10 @@ export function TemplateGallery({
   const createNewWorkflow = useWorkflowStore((state) => state.createNewWorkflow);
   const resetStatuses = useRunStore((state) => state.resetStatuses);
   const [pending, setPending] = useState<string | null>(null);
+  const [tag, setTag] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
+
+  const visible = useMemo(() => filterTemplates(TEMPLATES, { tag, query }), [tag, query]);
 
   const apply = (template: Template, asNewWorkflow: boolean) => {
     setPending(template.id);
@@ -66,8 +71,42 @@ export function TemplateGallery({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="-mr-2 grid max-h-[52vh] gap-3 overflow-y-auto pr-2 sm:grid-cols-2">
-          {TEMPLATES.map((template, index) => (
+        <div className="space-y-3">
+          <div className="relative">
+            <Search
+              className="pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-muted-foreground"
+              aria-hidden
+            />
+            <TextInput
+              value={query}
+              onChange={setQuery}
+              placeholder="Search templates… (name, tag or description)"
+            />
+          </div>
+
+          <div className="flex flex-wrap gap-2" role="group" aria-label="Filter templates by tag">
+            <TagChip active={tag === null} onClick={() => setTag(null)} label="All" count={TEMPLATES.length} />
+            {TEMPLATE_TAGS.map((entry) => (
+              <TagChip
+                key={entry}
+                active={tag === entry}
+                onClick={() => setTag(tag === entry ? null : entry)}
+                label={entry}
+                count={TEMPLATES.filter((template) => template.tags.includes(entry)).length}
+              />
+            ))}
+          </div>
+        </div>
+
+        <div className="-mr-2 grid max-h-[46vh] gap-3 overflow-y-auto pr-2 sm:grid-cols-2">
+          {visible.length === 0 && (
+            <p className="col-span-full rounded-lg border border-dashed border-border px-4 py-8 text-center text-xs text-muted-foreground">
+              No template matches {tag ? `the “${tag}” tag` : "your search"}
+              {query ? ` and “${query}”` : ""}.
+            </p>
+          )}
+
+          {visible.map((template, index) => (
             <motion.article
               key={template.id}
               initial={{ opacity: 0, y: 8 }}
@@ -83,6 +122,24 @@ export function TemplateGallery({
                 <span className="shrink-0 rounded-full border border-border px-2 py-1 font-mono text-[10px] text-muted-foreground">
                   {template.category}
                 </span>
+              </div>
+
+              <div className="mt-2 flex flex-wrap gap-1">
+                {template.tags.map((entry) => (
+                  <button
+                    key={entry}
+                    type="button"
+                    onClick={() => setTag(tag === entry ? null : entry)}
+                    className={cn(
+                      "rounded-full border px-2 py-1 font-mono text-[10px] transition-colors",
+                      tag === entry
+                        ? "border-accent/60 bg-accent/15 text-accent"
+                        : "border-border text-muted-foreground hover:border-accent/45 hover:text-foreground",
+                    )}
+                  >
+                    #{entry}
+                  </button>
+                ))}
               </div>
 
               <p className="mt-2 flex-1 text-xs leading-relaxed text-muted-foreground">
@@ -118,5 +175,35 @@ export function TemplateGallery({
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/** Filter chip: label plus the number of templates that carry the tag. */
+function TagChip({
+  label,
+  count,
+  active,
+  onClick,
+}: {
+  label: string;
+  count: number;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={cn(
+        "inline-flex items-center gap-2 rounded-full border px-3 py-1 font-mono text-[10px] transition-colors",
+        active
+          ? "border-accent/60 bg-accent/15 text-accent"
+          : "border-border text-muted-foreground hover:border-accent/45 hover:text-foreground",
+      )}
+    >
+      {label}
+      <span className="tabular-nums text-muted-foreground">{count}</span>
+    </button>
   );
 }

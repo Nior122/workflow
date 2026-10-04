@@ -136,6 +136,47 @@ export const aiAgent = defineNode<"action.aiAgent">({
     ];
   },
   execute: async (input, config, ctx) => {
+    // If Phase 4 bottom sub-nodes (Chat Model, Memory, or Tools) are connected,
+    // delegate to the declarative AI Agent simulator so sub-nodes, edge pulsing,
+    // keyword tool selection, and nested multi-agent delegation run.
+    if (
+      ctx.subNodes &&
+      (ctx.subNodes.model ||
+        ctx.subNodes.memory ||
+        ctx.subNodes.tools.length > 0)
+    ) {
+      const { aiAgentNode } = await import("@/lib/nodes/ai");
+      const { createSeededFaker } = await import("@/lib/nodes/faker-seed");
+      const simResult = await aiAgentNode.simulate(
+        input,
+        config as unknown as Record<string, unknown>,
+        {
+          nodeId: ctx.nodeId,
+          nodeLabel: ctx.nodeLabel ?? "AI Agent",
+          items: ctx.items ?? [{ json: input }],
+          itemIndex: 0,
+          scope: ctx.scope,
+          subNodes: ctx.subNodes,
+          faker: createSeededFaker(ctx.random),
+          random: ctx.random,
+          now: ctx.now,
+          sleep: ctx.sleep,
+          speed: ctx.speed,
+          resolveExpression: (expr: string) => renderTemplate(expr, ctx.scope).text,
+        },
+      );
+      const outputPayload = Array.isArray(simResult.output)
+        ? (simResult.output[0]?.json ?? {})
+        : simResult.output;
+      return {
+        payload: outputPayload,
+        trace: simResult.agentTrace,
+        logs: simResult.logs,
+        tokenUsage: simResult.tokenUsage,
+        meta: simResult.meta,
+      };
+    }
+
     const renderedGoal = renderTemplate(config.goal, ctx.scope);
     const renderedSystem = renderTemplate(config.systemPrompt, ctx.scope);
     const run = simulateAgentRun({

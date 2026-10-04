@@ -25,6 +25,7 @@ import {
   getNodeDef,
   resetNodeIdCounter,
 } from "@/lib/engine/registry";
+import { inferSubNodePortKind, validateConnectionCompat } from "@/lib/engine/validator";
 import { createWorkflow, type Viewport, type Workflow } from "@/types/workflow";
 import { useRunStore } from "./runStore";
 import { DEFAULT_VIEWPORT, RUN_HISTORY_LIMIT } from "@/config/constants";
@@ -76,6 +77,17 @@ type WorkflowState = {
   onEdgesChange: (changes: EdgeChange<FlowEdge>[]) => void;
   onConnect: (connection: Connection) => void;
   addNode: (type: NodeType, position: { x: number; y: number }) => string | null;
+  /** Add a node and optionally auto-wire it to an existing node (quick-add popup). */
+  quickAddNode: (
+    type: NodeType,
+    position: { x: number; y: number },
+    connect?: {
+      sourceNodeId?: string;
+      targetNodeId?: string;
+      sourceHandle?: string;
+      targetHandle?: string;
+    },
+  ) => string | null;
   updateNodeData: (nodeId: string, patch: Partial<FlowNodeData>) => void;
   renameNode: (nodeId: string, label: string) => void;
   deleteSelection: () => void;
@@ -109,16 +121,58 @@ type WorkflowState = {
 };
 
 /** Can `connection` legally be made, given the port rules for each node type? */
-function isValidConnectionTarget(
+function connectionCheck(
   nodes: readonly FlowNode[],
+  edges: readonly FlowEdge[],
   connection: Connection,
-): boolean {
+): { valid: boolean; reason?: string } {
   const source = nodes.find((node) => node.id === connection.source);
   const target = nodes.find((node) => node.id === connection.target);
-  if (!source || !target || source.id === target.id) return false;
-  if (!hasOutput(source.type as NodeType)) return false;
-  if (!hasInput(target.type as NodeType)) return false;
-  return connection.targetHandle === TARGET_HANDLE_IN;
+  if (!source || !target) {
+    return { valid: false, reason: "That connection is not valid." };
+  }
+  if (source.id === target.id) {
+    return { valid: false, reason: "A node cannot connect to itself." };
+  }
+  if (!hasOutput(source.type as NodeType)) {
+    return {
+      valid: false,
+      reason: `${source.data.label} cannot accept this connection — it has no output port.`,
+    };
+  }
+  if (!hasInput(target.type as NodeType)) {
+    return {
+      valid: false,
+      reason: `${target.data.label} cannot accept this connection — it has no input port.`,
+    };
+  }
+
+  return validateConnectionCompat({
+    sourceNode: source,
+    targetNode: target,
+    sourceHandle: connection.sourceHandle,
+    targetHandle: connection.targetHandle,
+    existingEdges: edges,
+  });
+}
+
+const SUB_NODE_HANDLES = new Set(["ai_model", "ai_memory", "ai_tool"]);
+
+/** Which sub-node port a connection belongs to, if any. */
+function subNodePortOf(
+  connection: Connection,
+  target: FlowNode | undefined,
+): "ai_model" | "ai_memory" | "ai_tool" | undefined {
+  for (const handle of [connection.sourceHandle, connection.targetHandle]) {
+    if (handle && SUB_NODE_HANDLES.has(handle)) {
+      return handle as "ai_model" | "ai_memory" | "ai_tool";
+    }
+  }
+  if (target) {
+    const kind = inferSubNodePortKind(target.type);
+    if (kind !== "main") return kind;
+  }
+  return undefined;
 }
 
 let edgeCounter = 0;
@@ -200,25 +254,50 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
 
   onConnect: (connection) =>
     set((state) => {
-      if (!isValidConnectionTarget(state.nodes, connection)) {
+      const check = connectionCheck(state.nodes, state.edges, connection);
+      if (!check.valid) {
         const target = state.nodes.find((node) => node.id === connection.target);
         return {
-          lastConnectionError: target
-            ? `${target.data.label} cannot accept this connection.`
-            : "That connection is not valid.",
+          lastConnectionError:
+            check.reason ??
+            (target
+              ? `${target.data.label} cannot accept this connection.`
+              : "That connection is not valid."),
         };
       }
 
+      const target = state.nodes.find((node) => node.id === connection.target);
+      const portKind = subNodePortOf(connection, target);
+
       edgeCounter += 1;
-      const sourceHandle = isSourceHandle(connection.sourceHandle)
-        ? connection.sourceHandle
-        : "out";
+      const rawSourceHandle = connection.sourceHandle;
+      const sourceHandle = portKind ?? (isSourceHandle(rawSourceHandle) ? rawSourceHandle : "out");
       const label =
-        sourceHandle === "true" ? "true" : sourceHandle === "false" ? "false" : undefined;
+        sourceHandle === "true"
+          ? "true"
+          : sourceHandle === "false"
+            ? "false"
+            : sourceHandle === "case_0"
+              ? "Case 1"
+              : sourceHandle === "case_1"
+                ? "Case 2"
+                : sourceHandle === "case_2"
+                  ? "Case 3"
+                  : sourceHandle === "fallback"
+                    ? "Fallback"
+                    : sourceHandle === "loop"
+                      ? "Loop"
+                      : sourceHandle === "done"
+                        ? "Done"
+                        : sourceHandle === "error"
+                          ? "Error"
+                          : undefined;
 
       const edge = createFlowEdge(`e-${edgeCounter}`, connection.source, connection.target, {
         sourceHandle,
+        targetHandle: portKind ?? connection.targetHandle ?? TARGET_HANDLE_IN,
         label,
+        portKind: portKind ?? "main",
       });
 
       return {
@@ -239,6 +318,69 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       future: [],
       nodes: [...state.nodes, node],
     }));
+    return node.id;
+  },
+
+  quickAddNode: (type, position, connect) => {
+    const def = getNodeDef(type);
+    if (!def) return null;
+
+    const node = createFlowNode(type, position);
+    set((state) => {
+      let edges = state.edges;
+      let lastConnectionError: string | null = null;
+
+      if (connect) {
+        const connection: Connection = connect.sourceNodeId
+          ? {
+              source: connect.sourceNodeId,
+              target: node.id,
+              sourceHandle: connect.sourceHandle ?? "out",
+              targetHandle: connect.targetHandle ?? TARGET_HANDLE_IN,
+            }
+          : {
+              source: node.id,
+              target: connect.targetNodeId ?? "",
+              sourceHandle: connect.sourceHandle ?? "out",
+              targetHandle: connect.targetHandle ?? TARGET_HANDLE_IN,
+            };
+
+        const check = connectionCheck(
+          [...state.nodes, node],
+          state.edges,
+          connection,
+        );
+        if (check.valid) {
+          const target = [...state.nodes, node].find((n) => n.id === connection.target);
+          const portKind = subNodePortOf(connection, target);
+          edgeCounter += 1;
+          edges = addEdge(
+            createFlowEdge(`e-${edgeCounter}`, connection.source, connection.target, {
+              sourceHandle: portKind ?? (connection.sourceHandle ?? "out"),
+              targetHandle: portKind ?? connection.targetHandle ?? TARGET_HANDLE_IN,
+              label:
+                connection.sourceHandle === "true"
+                  ? "true"
+                  : connection.sourceHandle === "false"
+                    ? "false"
+                    : undefined,
+              portKind: portKind ?? "main",
+            }),
+            state.edges,
+          );
+        } else {
+          lastConnectionError = check.reason ?? "Auto-connect was not valid.";
+        }
+      }
+
+      return {
+        past: [...state.past, { nodes: state.nodes, edges: state.edges }].slice(-HISTORY_LIMIT),
+        future: [],
+        nodes: [...state.nodes, node],
+        edges,
+        lastConnectionError,
+      };
+    });
     return node.id;
   },
 

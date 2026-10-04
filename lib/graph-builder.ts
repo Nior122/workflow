@@ -8,6 +8,8 @@
 
 import { createFlowEdge, createFlowNode } from "@/lib/engine/registry";
 import type { FlowEdge, FlowNode, FlowNodeOf, NodeConfigOf, NodeType } from "@/types";
+import type { SourceHandleId, TargetHandleId } from "@/types/edges";
+import type { PortKind } from "@/types/registry";
 
 export type NodeOptions = {
   position?: { x: number; y: number };
@@ -44,7 +46,7 @@ export function buildNode<T extends NodeType>(
 export function buildEdge(
   source: string,
   target: string,
-  sourceHandle: "out" | "true" | "false" = "out",
+  sourceHandle: SourceHandleId = "out",
 ): FlowEdge {
   return createFlowEdge(
     `e-${source}-${sourceHandle}-${target}`,
@@ -55,6 +57,24 @@ export function buildEdge(
       label: sourceHandle === "out" ? undefined : sourceHandle,
     },
   );
+}
+
+/**
+ * Wire an AI sub-node (`aiModel.*`, `aiMemory.*`, `aiTool.*`) into an AI Agent's
+ * bottom port. Sub-node edges carry an explicit port kind so the canvas can colour
+ * them and the executor can collect them into `ctx.subNodes`.
+ */
+export function buildSubNodeEdge(
+  source: string,
+  target: string,
+  portKind: Exclude<PortKind, "main">,
+): FlowEdge {
+  const targetHandle: TargetHandleId = portKind;
+  return createFlowEdge(`e-${source}-${portKind}-${target}`, source, target, {
+    sourceHandle: portKind,
+    targetHandle,
+    portKind,
+  });
 }
 
 export type BuiltGraph = {

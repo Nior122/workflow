@@ -119,6 +119,39 @@ describe("autoLayout", () => {
     expect(result.nodes[1].position).toEqual({ x: 33, y: 44 });
   });
 
+  it("lays out a 60+ node graph without overlap and in well under a frame budget", () => {
+    // A realistic wide graph: one trigger fanning into 30 pairs of action → log.
+    const nodes: ReturnType<typeof buildNode>[] = [buildNode("t1", "trigger.manual")];
+    const edges = [];
+
+    for (let index = 0; index < 30; index += 1) {
+      nodes.push(buildNode(`a${index}`, "action.transform"));
+      nodes.push(buildNode(`o${index}`, "output.log"));
+      edges.push(buildEdge("t1", `a${index}`));
+      edges.push(buildEdge(`a${index}`, `o${index}`));
+    }
+
+    const startedAt = performance.now();
+    const result = autoLayout(nodes, edges);
+    const elapsed = performance.now() - startedAt;
+
+    expect(result.nodes).toHaveLength(61);
+    // Column assignment is O(waves); a 61-node graph must stay far from the ~16 ms
+    // frame budget, otherwise the auto-layout button would visibly hitch.
+    expect(elapsed).toBeLessThan(50);
+
+    // No two nodes may share a position — overlap is what makes a big canvas
+    // unreadable, and it is the one thing column maths can silently get wrong.
+    const seen = new Set(result.nodes.map((node) => `${node.position.x}:${node.position.y}`));
+    expect(seen.size).toBe(result.nodes.length);
+
+    // Every action sits in the same column, between the trigger and the outputs.
+    const xOf = (id: string) => result.nodes.find((node) => node.id === id)!.position.x;
+    expect(xOf("t1")).toBeLessThan(xOf("a0"));
+    expect(new Set(nodes.slice(1).filter((n) => n.id.startsWith("a")).map((n) => xOf(n.id))).size).toBe(1);
+    expect(xOf("a0")).toBeLessThan(xOf("o0"));
+  });
+
   it("reports a bounding box covering every node", () => {
     const nodes = [
       buildNode("t1", "trigger.manual"),
