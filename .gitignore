@@ -12,6 +12,8 @@
 
 # testing
 /coverage
+# vitest's own run artifacts (json reporter output, caches)
+.vitest/
 
 # next.js
 /.next/
